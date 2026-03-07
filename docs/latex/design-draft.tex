@@ -1,0 +1,122 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{R1: Design Draft}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{EEL4907 CpE Design 1}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large March 6, 2026\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Introduction}
+%=============================================================================
+
+\subsection{Purpose / Need}
+
+The project aims to create a \textbf{plug-and-play secure exam computer} built around a RISC-V board. The motivation comes from the growing problem of AI-assisted cheating, especially in coding exams, and the limitations of current solutions such as Honorlock, which require intrusive monitoring of student laptops.
+
+Instead of securing arbitrary student machines, we distribute \textbf{dedicated exam devices} during tests. Each device boots into a locked-down Linux environment and launches Safe Exam Browser (SEB)~\cite{safeexambrowser} so students take exams through Canvas. Because the hardware and software stack are controlled, tampering is much harder while avoiding the privacy concerns of remote proctoring tools. The system is needed by institutions and instructors who want exam integrity without surveilling students' personal devices.
+
+\subsection{Domain \& Prior Work}
+
+The project sits at the intersection of secure boot, locked-down computing environments, and academic assessment. Prior work includes commercial proctoring (e.g., Honorlock, Respondus) and locked browsers (Safe Exam Browser). Our approach differs by controlling the entire device rather than layering software on untrusted student hardware.
+
+\textbf{Current status / prior work:} This project was previously advanced by Nicholas DeSanctis. The RISC-V board already boots into a full Linux OS. Other students (Shane and Wilson) are integrating SEB with Canvas; our work will connect the RISC-V system to that pipeline.
+
+\subsection{Impact \& Risk Assessment}
+TODO
+
+%=============================================================================
+\section{Statement of Work}
+%=============================================================================
+
+\textbf{Primary deliverable:} Connect the RISC-V system to Safe Exam Browser so a student can take an exam on the device. Target workflow: device powers on $\rightarrow$ boots into hardened Linux $\rightarrow$ automatically launches SEB $\rightarrow$ student logs into Canvas and takes the exam. A complication is that Safe Exam Browser does not officially support Linux; integration may require custom configuration or adaptation.
+
+\textbf{Security:} Ensure the software on the device cannot be silently modified. One approach is verifying the system image with a cryptographic hash stored in secure storage; the kernel or bootloader checks the OS image at boot and refuses to boot on mismatch, forming part of a secure boot chain. The goal is a system where students cannot modify the OS or install other tools but can still complete exams, write code, and compile as needed.
+
+\textbf{Core and secondary features, milestones, and assignments:}
+
+TODO
+
+%=============================================================================
+\section{Deliverable Artifacts}
+%=============================================================================
+
+\subsection{Hardware}
+
+\textbf{Description:} A simple physical exam device for easy deployment (e.g., 3D-printed enclosure mounting the RISC-V board to the VESA mount on the back of a monitor, creating a compact ``all-in-one'' exam computer with only power, keyboard, and mouse).
+
+
+\subsection{Software}
+
+\textbf{Description:} Hardened Linux image, secure boot components, and integration with Safe Exam Browser and Canvas.
+
+
+\subsection{Documentation}
+
+\textbf{Description:} Manuals, specifications, and reports (including this design draft and subsequent deliverables).
+
+
+%=============================================================================
+\section{Mockups}
+%=============================================================================
+
+\subsection{Interfaces}
+
+TODO
+
+\subsection{Systems}
+
+TODO
+
+\subsection{Networking}
+
+TODO
+
+\subsection{Storyboards}
+
+TODO
+
+\subsection{Draft Schematics}
+
+TODO
+
+%=============================================================================
+\section{Stretch Goals}
+%=============================================================================
+
+(1) System for distributing configuration to exam devices (exam settings, network config). (2) Hardware-bound cryptographic keys per device (e.g., private key to decrypt/verify config), so the exam environment only runs on approved hardware. Additional hardening (kernel hardening, capability restriction, stronger secure boot) may be needed as the project progresses.
+
+\begin{thebibliography}{9}
+\bibitem{safeexambrowser}
+Safe Exam Browser. ETH Zürich. \url{https://github.com/safeexambrowser}. Accessed Mar. 2026.
+\end{thebibliography}
+
+\end{document}

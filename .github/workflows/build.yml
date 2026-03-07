@@ -1,0 +1,40 @@
+name: Build LaTeX docs
+
+on:
+  push:
+    paths:
+      - '**/*.tex'
+
+jobs:
+  build_latex:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install TeX Live
+        run: sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-latex-extra
+
+      - name: Build all .tex and publish to docs/pdfs/
+        env:
+          BUILD_DIR: ${{ github.workspace }}/build
+        run: |
+          mkdir -p docs/pdfs "$BUILD_DIR"
+          export TEXMFOUTPUT="$BUILD_DIR"
+          cd docs/latex
+          for f in *.tex; do
+            [ -f "$f" ] || continue
+            pdflatex -output-directory="$BUILD_DIR" "$f" && pdflatex -output-directory="$BUILD_DIR" "$f"
+            mv "$BUILD_DIR/${f%.tex}.pdf" "$GITHUB_WORKSPACE/docs/pdfs/"
+          done
+
+      - name: Commit and push PDFs
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/pdfs/
+          git status
+          git diff --staged --quiet || git commit -m "Auto-compiled PDFs from docs/latex" && git push || echo "Nothing to commit or push failed"
