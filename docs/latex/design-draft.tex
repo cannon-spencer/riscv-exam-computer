@@ -50,8 +50,40 @@ The project sits at the intersection of secure boot, locked-down computing envir
 
 \textbf{Current status / prior work:} This project was previously advanced by Nicholas DeSanctis. The RISC-V board already boots into a full Linux OS. Other students (Shane and Wilson) are integrating SEB with Canvas; our work will connect the RISC-V system to that pipeline.
 
+%=============================================================================
 \subsection{Impact \& Risk Assessment}
-TODO
+%=============================================================================
+
+The proposed hardened RISC-V exam computer addresses critical challenges in modern academic assessment, balancing security requirements with ethical and environmental considerations.
+
+\textbf{Social \& Cultural:} 
+The primary social impact is the restoration of pedagogical integrity in an era where Large Language Models (LLMs) and generative AI can be deployed covertly to bypass traditional assessment. 
+By hardening the testing environment, the project reinstates the incentive for students to master course material rather than relying on external automation. 
+Culturally, this maintains the prestige of the University of Florida degree, ensuring that graduation signifies genuine competency and providing a level playing field for all students.
+
+\textbf{Economic:} 
+The current status quo for exam integrity relies on Software-as-a-Service (SaaS) models like Honorlock or Respondus. 
+These solutions involve high operational expenditure, often reaching six-figure annual fees due to per-student, per-exam pricing structures. 
+In contrast, this project represents a shift toward capital expenditure while the upfront hardware cost is higher, it eliminates recurring licensing fees. 
+Additionally, maintaining a university-owned fleet creates technical student-employment opportunities, providing hands-on experience in open-source maintenance/development and hardware maintenance.
+
+\textbf{Ethical:} 
+Modern proctoring software often requires intrusive access to student-owned hardware and personal environments, raising significant privacy concerns. 
+This project addresses these ethical dilemmas through a design-for-privacy approach, shifting the security burden from the student’s personal device to university-owned hardware. 
+This ensures that no invasive monitoring software—which can often act as a rootkit—is ever installed on a student’s personal property.
+
+\textbf{Environmental \& Global:} 
+Utilizing the RISC-V architecture promotes an open-standard Instruction Set Architecture (ISA), reducing global reliance on proprietary silicon. 
+From an environmental standpoint, these boards are high-efficiency, low-power devices (typically <15W), significantly reducing the aggregate carbon footprint compared to a classroom of high-performance consumer laptops. 
+The use of 3D-printed enclosures further allows for localized manufacturing and the use of recyclable materials like PETG or PLA.
+
+
+
+\textbf{Risk Assessment \& Limitations:} 
+The primary technical risk is the "arms race" of hardware exploits. 
+Since students have physical access to the device, sophisticated actors could attempt to interface with the hardware via GPIO pins or physical keyloggers. 
+Furthermore, as a custom solution, there is a risk of hardware failure during an active exam. 
+To mitigate these risks, the design incorporates a secure boot chain to detect system tampering and a deployment strategy that replaces faulty units immediately without loss of student exam progress.
 
 %=============================================================================
 \section{Statement of Work}
@@ -71,19 +103,40 @@ TODO
 
 \subsection{Hardware}
 
-\textbf{Description:} A simple physical exam device for easy deployment (e.g., 3D-printed enclosure mounting the RISC-V board to the VESA mount on the back of a monitor, creating a compact ``all-in-one'' exam computer with only power, keyboard, and mouse).
+\textbf{Description:} 
+A simple physical exam device for easy deployment (e.g., 3D-printed enclosure mounting the RISC-V board to the VESA mount on the back of a monitor, creating a compact ``all-in-one'' exam computer with only power, keyboard, and mouse).
 
+\textbf{Accessibility, Usability, \& Maintenance:} 
+The hardware utilizes a standard VESA mount to ensure compatibility with existing university laboratory infrastructure.
+For maintenance, the enclosure is designed for tool-less or single-fastener access to allow for rapid replacement of the RISC-V board or storage media in the event of hardware failure.
+Usability is prioritized through a simplified I/O layout, reducing the potential for student error if connecting peripherals.
 
 \subsection{Software}
 
-\textbf{Description:} Hardened Linux image, secure boot components, and integration with Safe Exam Browser and Canvas.
+\textbf{Description:} 
+Hardened Linux image, secure boot components, and integration with Safe Exam Browser and Canvas.
 
+\textbf{Dissemination Plan:} 
+All produced software will be open sourced, barring components that must remain confidential to maintain the hardening integrity of the system.
+By design, the software will be packaged and integrated with the OS of the device and will require no additional building, installation, or configuration by the end-user.
+
+\textbf{Accessibility, Usability, \& Maintenance:} 
+TODO
 
 \subsection{Documentation}
 
-\textbf{Description:} Manuals, specifications, and reports (including this design draft and subsequent deliverables).
+\textbf{Description:} 
+Manuals, specifications, and reports (including this design draft and subsequent deliverables).
 
+\textbf{Dissemination Plan:} 
+All produced documentation will be open sourced alongside the project software.
+Additionally, documentation will be provided for use and procedures at each level of authority.
+That is, documentation will be provided for those who intend to build the project, professors who aim to use the device, and students requiring instructions on proper operation.
 
+\textbf{Accessibility, Usability, \& Maintenance:} 
+All documentation will be provided in searchable, screen-reader-friendly PDF and Markdown formats to ensure accessibility for all users.
+Maintenance will be managed via a hosted documentation platform (e.g., ReadTheDocs or a GitHub Wiki), allowing for real-time updates as the RISC-V ecosystem or Canvas API evolves.
+Versioned manuals will ensure that documentation remains synchronized with the specific hardware revisions deployed in the field.
 %=============================================================================
 \section{Mockups}
 %=============================================================================
@@ -112,7 +165,8 @@ TODO
 \section{Stretch Goals}
 %=============================================================================
 
-(1) System for distributing configuration to exam devices (exam settings, network config). (2) Hardware-bound cryptographic keys per device (e.g., private key to decrypt/verify config), so the exam environment only runs on approved hardware. Additional hardening (kernel hardening, capability restriction, stronger secure boot) may be needed as the project progresses.
+(1) System for distributing configuration to exam devices (exam settings, network config). 
+(2) Hardware-bound cryptographic keys per device (e.g., private key to decrypt/verify config), so the exam environment only runs on approved hardware. Additional hardening (kernel hardening, capability restriction, stronger secure boot) may be needed as the project progresses.
 
 \begin{thebibliography}{9}
 \bibitem{safeexambrowser}
