@@ -24,7 +24,7 @@
   \vspace{0.35em}
   {\Large Hardened RISC-V Exam Computer\par}
   \vspace{0.3em}
-  {\Large March 6, 2026\par}
+  {\Large March 10, 2026\par}
   \vspace{0.6in}
   {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes\par}
   \vspace{1in}
@@ -89,13 +89,27 @@ To mitigate these risks, the design incorporates a secure boot chain to detect s
 \section{Statement of Work}
 %=============================================================================
 
-\textbf{Primary deliverable:} Connect the RISC-V system to Safe Exam Browser so a student can take an exam on the device. Target workflow: device powers on $\rightarrow$ boots into hardened Linux $\rightarrow$ automatically launches SEB $\rightarrow$ student logs into Canvas and takes the exam. A complication is that Safe Exam Browser does not officially support Linux; integration may require custom configuration or adaptation.
+\textbf{Primary Deliverable:} The development of a RISC-V native, SEB-compatible kiosk environment. Because official SEB support is restricted to Windows, macOS, and iOS, this project will implement a \textbf{Linux SEB-Wrapper}. This wrapper will utilize a Wayland-based Kiosk compositor to replicate the Kiosk application lockdown features and a custom browser instance to handle the Browser Exam Key (BEK) and Configuration Security Key (CSK) handshakes required by Canvas.
 
-\textbf{Security:} Ensure the software on the device cannot be silently modified. One approach is verifying the system image with a cryptographic hash stored in secure storage; the kernel or bootloader checks the OS image at boot and refuses to boot on mismatch, forming part of a secure boot chain. The goal is a system where students cannot modify the OS or install other tools but can still complete exams, write code, and compile as needed.
+\textbf{Performance Specifications:}
+\begin{itemize}
+    \item \textbf{SoC:} SpacemiT K1 (8-core RISC-V) with hardware-accelerated AES/SHA for configuration decryption.
+    \item \textbf{Lockdown Efficacy:} System must disable all TTY switching (Ctrl+Alt+Fx), terminate non-whitelisted processes, and prevent escape via standard window management shortcuts.
+    \item \textbf{Integrity:} Use RISC-V PMP (Physical Memory Protection) to isolate the SEB configuration keys from user-space memory.
+\end{itemize}
 
-\textbf{Core and secondary features, milestones, and assignments:}
-
-TODO
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|p{6cm}|l|l|}
+\hline
+\textbf{ID} & \textbf{Task Description} & \textbf{Owner} & \textbf{Target Date} \\ \hline
+\textbf{SW-01} & Port SEB configuration parsing logic (XML/PList) to C++/Python for Linux. & Name & April ?? \\ \hline
+\textbf{SW-02} & Implement the SEB-to-LMS Handshake (BEK/CSK hashing) to satisfy Canvas security. & Name & April ?? \\ \hline
+\textbf{UI-01} & Configure Cage (Wayland compositor) for single-application kiosk mode. & Name & April ?? \\ \hline
+\textbf{SEC-01} & Implement Secure Boot and read-only eMMC partitioning on the BPI-F3. & Name & April ?? \\ \hline
+\end{tabular}
+\caption{Project Milestones for SEB-Linux Implementation}
+\end{table}
 
 %=============================================================================
 \section{Deliverable Artifacts}
@@ -121,7 +135,7 @@ All produced software will be open sourced, barring components that must remain 
 By design, the software will be packaged and integrated with the OS of the device and will require no additional building, installation, or configuration by the end-user.
 
 \textbf{Accessibility, Usability, \& Maintenance:} 
-TODO
+The software environment is designed to be self-healing; since the eMMC is mounted as a read-only filesystem, any accidental or malicious changes are wiped upon a power cycle. For accessibility, the kiosk browser will support standard web accessibility features, including screen reader compatibility via the ARIA standard and keyboard-only navigation, ensuring compliance with ADA requirements for testing environments.
 
 \subsection{Documentation}
 
@@ -170,7 +184,19 @@ TODO
 
 \begin{thebibliography}{9}
 \bibitem{safeexambrowser}
-Safe Exam Browser. ETH Zürich. \url{https://github.com/safeexambrowser}. Accessed Mar. 2026.
+Safe Exam Browser. ETH Zürich. [Online]. Available: \url{https://github.com/safeexambrowser}. Accessed Mar. 2026.
+
+\bibitem{seb_concept}
+ETH Zürich, ``Safe Exam Browser: Concept and Architecture,'' SafeExamBrowser.org, 2025. [Online]. Available: \url{https://safeexambrowser.org/about_overview_en.html}. Accessed Mar. 2026.
+
+\bibitem{spacemit_k1}
+SpacemiT, ``SpacemiT K1 8 core RISC-V chip Brief,'' SpacemiT Technical Documentation, 2024. [Online]. Available: \url{https://docs.banana-pi.org/en/BPI-F3/SpacemiT_K1}.
+
+\bibitem{riscv_priv}
+RISC-V International, ``The RISC-V Instruction Set Manual, Volume II: Privileged Architecture,'' Document Version 20211203, Dec. 2021. [Online]. \\Available: \url{https://www.scs.stanford.edu/~zyedidia/docs/riscv/riscv-privileged.pdf}.
+
+\bibitem{cage_kiosk}
+J. Deitrick, ``Cage: A Wayland kiosk compositor,'' GitHub Repository, 2025. [Online]. Available: \url{https://github.com/cage-kiosk/cage}.
 \end{thebibliography}
 
 \end{document}
