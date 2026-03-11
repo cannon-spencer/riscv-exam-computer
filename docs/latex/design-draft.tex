@@ -169,7 +169,17 @@ TODO
 
 \subsection{Storyboards}
 
-TODO
+The following describes the intended user workflow from device power-on to exam completion.
+
+\begin{enumerate}
+    \item \textbf{Device Power-On:} The proctor distributes the exam devices and powers them on. No student interaction is required at this stage.
+    \item \textbf{Secure Boot:} The system verifies the integrity of the OS image via cryptographic hashes. If the image has been tampered with, the device halts and alerts the proctor.
+    \item \textbf{Hardened Linux Boot:} The device boots into the locked-down Linux environment. All unnecessary services, TTY switching, and window management shortcuts are disabled.
+    \item \textbf{SEB Launch:} Safe Exam Browser launches automatically in kiosk mode, filling the entire screen. The student cannot exit or access any other application.
+    \item \textbf{Canvas Login:} The student is presented with the Canvas login page inside SEB. They log in using their university credentials.
+    \item \textbf{Exam Session:} The student completes their exam through Canvas. The Browser Exam Key (BEK) and Configuration Security Key (CSK) handshakes ensure the session is valid and untampered.
+    \item \textbf{Session Wipe:} Upon exam completion or device power-off, the read-only filesystem ensures any temporary session data is wiped on the next power cycle.
+\end{enumerate}
 
 \subsection{Draft Schematics}
 
