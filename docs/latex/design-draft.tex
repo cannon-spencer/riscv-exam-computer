@@ -28,9 +28,9 @@
   \vspace{0.35em}
   {\Large Hardened RISC-V Exam Computer\par}
   \vspace{0.3em}
-  {\Large March 10, 2026\par}
+  {\Large March 11, 2026\par}
   \vspace{0.6in}
-  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes\par}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
   \vspace{1in}
   \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
   \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
@@ -90,6 +90,7 @@ Furthermore, as a custom solution, there is a risk of hardware failure during an
 To mitigate these risks, the design incorporates a secure boot chain to detect system tampering and a deployment strategy that replaces faulty units immediately without loss of student exam progress.
 
 %=============================================================================
+\newpage
 \section{Statement of Work}
 %=============================================================================
 
@@ -107,15 +108,16 @@ To mitigate these risks, the design incorporates a secure boot chain to detect s
 \begin{tabular}{|l|p{6cm}|l|l|}
 \hline
 \textbf{ID} & \textbf{Task Description} & \textbf{Owner} & \textbf{Target Date} \\ \hline
-\textbf{SW-01} & Port SEB configuration parsing logic (XML/PList) to C++/Python for Linux. & Name & April ?? \\ \hline
-\textbf{SW-02} & Implement the SEB-to-LMS Handshake (BEK/CSK hashing) to satisfy Canvas security. & Name & April ?? \\ \hline
-\textbf{UI-01} & Configure Cage (Wayland compositor) for single-application kiosk mode. & Name & April ?? \\ \hline
-\textbf{SEC-01} & Implement Secure Boot and read-only eMMC partitioning on the BPI-F3. & Name & April ?? \\ \hline
+\textbf{SW-01} & Port SEB configuration parsing logic (XML/PList) to C++/Python for Linux. & ALL / TBD & 3/14 \\ \hline
+\textbf{SW-02} & Implement the SEB-to-LMS Handshake (BEK/CSK hashing) to satisfy Canvas security. & ALL / TBD & 3/21 \\ \hline
+\textbf{UI-01} & Configure Cage (Wayland compositor) for single-application kiosk mode. & ALL / TBD & 3/28 \\ \hline
+\textbf{SEC-01} & Implement Secure Boot and read-only eMMC partitioning on the BPI-F3. & ALL / TBD & 4/5 \\ \hline
 \end{tabular}
 \caption{Project Milestones for SEB-Linux Implementation}
 \end{table}
 
 %=============================================================================
+\newpage
 \section{Deliverable Artifacts}
 %=============================================================================
 
@@ -156,6 +158,7 @@ All documentation will be provided in searchable, screen-reader-friendly PDF and
 Maintenance will be managed via a hosted documentation platform (e.g., ReadTheDocs or a GitHub Wiki), allowing for real-time updates as the RISC-V ecosystem or Canvas API evolves.
 Versioned manuals will ensure that documentation remains synchronized with the specific hardware revisions deployed in the field.
 %=============================================================================
+\newpage
 \section{Mockups}
 %=============================================================================
 
@@ -230,12 +233,19 @@ The following storyboard illustrates the complete software flow a student experi
 TODO
 
 %=============================================================================
+\newpage
 \section{Stretch Goals}
 %=============================================================================
 
-(1) System for distributing configuration to exam devices (exam settings, network config). 
-(2) Hardware-bound cryptographic keys per device (e.g., private key to decrypt/verify config), so the exam environment only runs on approved hardware. Additional hardening (kernel hardening, capability restriction, stronger secure boot) may be needed as the project progresses.
+This design focuses on the core deliverables for the capstone sequence. The project is intended to continue as a faculty-led effort under Dr. Blanchard, with the longer-term aim of deployment in University of Florida courses for in-class exams, or as devices that could be issued or mailed to students taking exams remotely. As the project continues to evolve toward that end goal, there is ample room for stretch work; the following objectives represent directions the team may pursue if time and pace allow.
 
+\begin{itemize}
+    \item \textbf{Configuration distribution system.} A centralized mechanism to push exam settings, network configuration, and SEB configuration to deployed devices. This would allow instructors or lab staff to update many units without reflashing or manual per-device setup, reducing operational overhead as the fleet grows.
+    \item \textbf{Hardware-bound cryptographic keys.} Each device could store a unique private key (e.g., in secure storage or TPM-like hardware) used to decrypt or verify configuration and exam payloads. The exam environment would then run only on approved, registered hardware and could not be copied to an arbitrary machine, strengthening the chain of trust.
+    \item \textbf{Additional hardening.} As the project matures, further hardening may be pursued: stricter kernel configuration (e.g., lockdown, reduced attack surface), capability-based restrictions in user space, and a stronger or more auditable secure boot chain. These would be prioritized based on risk assessment and time available after core functionality is complete.
+\end{itemize}
+
+\newpage
 \begin{thebibliography}{9}
 \bibitem{safeexambrowser}
 Safe Exam Browser. ETH Zürich. [Online]. Available: \url{https://github.com/safeexambrowser}. Accessed Mar. 2026.
