@@ -8,6 +8,7 @@
 \usepackage{url}
 \usepackage{float}
 \usepackage{caption}
+\usepackage{tabularx}
 \captionsetup{font=it}
 \captionsetup{justification=centering}
 
@@ -104,15 +105,15 @@ To mitigate these risks, the design incorporates a secure boot chain to detect s
 
 \begin{table}[h!]
 \centering
-\begin{tabular}{|l|p{6cm}|l|l|}
+\begin{tabularx}{\textwidth}{|l|X|}
 \hline
-\textbf{ID} & \textbf{Task Description} & \textbf{Owner} & \textbf{Target Date} \\ \hline
-\textbf{SW-01} & Port SEB configuration parsing logic (XML/PList) to C++/Python for Linux. & Name & April ?? \\ \hline
-\textbf{SW-02} & Implement the SEB-to-LMS Handshake (BEK/CSK hashing) to satisfy Canvas security. & Name & April ?? \\ \hline
-\textbf{UI-01} & Configure Cage (Wayland compositor) for single-application kiosk mode. & Name & April ?? \\ \hline
-\textbf{SEC-01} & Implement Secure Boot and read-only eMMC partitioning on the BPI-F3. & Name & April ?? \\ \hline
-\end{tabular}
-\caption{Project Milestones for SEB-Linux Implementation}
+\textbf{ID} & \textbf{Task Description} \\ \hline
+\textbf{SW-01*} & Port SEB configuration parsing logic (XML/PList) to C++/Python for Linux. \\ \hline
+\textbf{SW-02} & Implement the SEB-to-LMS Handshake (BEK/CSK hashing) to satisfy Canvas security. \\ \hline
+\textbf{UI-01} & Configure Cage (Wayland compositor) for single-application kiosk mode. \\ \hline
+\textbf{SEC-01} & Implement Secure Boot and read-only eMMC partitioning on the BPI-F3. \\ \hline
+\end{tabularx}
+\caption{Project Milestones for SEB-Linux Implementation (*: First Priority)}
 \end{table}
 
 %=============================================================================
@@ -224,10 +225,14 @@ The following storyboard illustrates the complete software flow a student experi
     \caption{Student Workflow Storyboard: SEB Launch through Canvas Exam Completion}
 \end{figure}
 
-\newpage
+\clearpage
 \subsection{Draft Schematics}
 
-TODO
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../artifacts/draftschematic.png}
+    \caption{Hardware Draft Schematic: High Level SBC Schematic with Banana Pi}
+\end{figure}
 
 %=============================================================================
 \section{Stretch Goals}
