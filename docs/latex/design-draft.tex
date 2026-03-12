@@ -8,6 +8,8 @@
 \usepackage{url}
 \usepackage{float}
 \usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tabularx}
 \captionsetup{font=it}
 \captionsetup{justification=centering}
 
@@ -71,6 +73,8 @@ These solutions involve high operational expenditure, often reaching six-figure 
 In contrast, this project represents a shift toward capital expenditure while the upfront hardware cost is higher, it eliminates recurring licensing fees. 
 Additionally, maintaining a university-owned fleet creates technical student-employment opportunities, providing hands-on experience in open-source maintenance/development and hardware maintenance.
 
+\clearpage
+
 \textbf{Ethical:} 
 Modern proctoring software often requires intrusive access to student-owned hardware and personal environments, raising significant privacy concerns. 
 This project addresses these ethical dilemmas through a design-for-privacy approach, shifting the security burden from the student’s personal device to university-owned hardware. 
@@ -105,15 +109,15 @@ To mitigate these risks, the design incorporates a secure boot chain to detect s
 
 \begin{table}[h!]
 \centering
-\begin{tabular}{|l|p{6cm}|l|l|}
+\begin{tabularx}{\textwidth}{|l|X|}
 \hline
-\textbf{ID} & \textbf{Task Description} & \textbf{Owner} & \textbf{Target Date} \\ \hline
-\textbf{SW-01} & Port SEB configuration parsing logic (XML/PList) to C++/Python for Linux. & ALL / TBD & 3/14 \\ \hline
-\textbf{SW-02} & Implement the SEB-to-LMS Handshake (BEK/CSK hashing) to satisfy Canvas security. & ALL / TBD & 3/21 \\ \hline
-\textbf{UI-01} & Configure Cage (Wayland compositor) for single-application kiosk mode. & ALL / TBD & 3/28 \\ \hline
-\textbf{SEC-01} & Implement Secure Boot and read-only eMMC partitioning on the BPI-F3. & ALL / TBD & 4/5 \\ \hline
-\end{tabular}
-\caption{Project Milestones for SEB-Linux Implementation}
+\textbf{ID} & \textbf{Task Description} \\ \hline
+\textbf{SW-01*} & Port SEB configuration parsing logic (XML/PList) to C++/Python for Linux. \\ \hline
+\textbf{SW-02} & Implement SEB-to-LMS Handshake (BEK/CSK hashing) to satisfy Canvas security. \\ \hline
+\textbf{UI-01} & Configure Cage (Wayland compositor) for single-application kiosk mode. \\ \hline
+\textbf{SEC-01} & Implement Secure Boot and read-only eMMC partitioning on the BPI-F3. \\ \hline
+\end{tabularx}
+\caption{Project Milestones for SEB-Linux Implementation (*: First Priority)}
 \end{table}
 
 %=============================================================================
@@ -168,39 +172,36 @@ The following mockups illustrate each software screen a student will encounter d
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{../artifacts/screen1-elearning.png}
-    \caption{UF e-Learning Login Page within SEB Kiosk}
-\end{figure}
-
-\begin{figure}[H]
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{../artifacts/screen1-elearning.png}
+        \caption{UF e-Learning Login}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{../artifacts/screen2-gatorlink.png}
+        \caption{Gatorlink Authentication}
+    \end{subfigure}\\[0.5em]
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{../artifacts/screen3-duo.png}
+        \caption{Duo Two-Factor Auth}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{../artifacts/screen4-exam.png}
+        \caption{Canvas Exam Session}
+    \end{subfigure}\\[0.5em]
     \centering
-    \includegraphics[width=0.8\textwidth]{../artifacts/screen2-gatorlink.png}
-    \caption{UF Gatorlink Authentication Page within SEB Kiosk}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{../artifacts/screen5-error.png}
+        \caption{System Integrity Check Failure}
+    \end{subfigure}
+    \caption{Interface mockups: software screens within the SEB kiosk (a--e).}
 \end{figure}
 
-\vspace{-0.5cm}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{../artifacts/screen3-duo.png}
-    \caption{Duo Two-Factor Authentication Page within SEB Kiosk}
-\end{figure}
-
-\vspace{-0.5cm}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{../artifacts/screen4-exam.png}
-    \caption{Canvas Exam Session within SEB Kiosk}
-\end{figure}
-
-\vspace{-1cm}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{../artifacts/screen5-error.png}
-    \caption{System Integrity Check Failure Screen}
-\end{figure}
-
-\newpage
-
+\clearpage
 
 
 \subsection{Systems}
@@ -214,8 +215,10 @@ The following mockups illustrate each software screen a student will encounter d
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.8\textwidth]{../artifacts/4.3 networks.png}
-    \caption{Network layers showing secure communication from Canvas servers to the exam device through the UF network}
+    \caption{Network layers showing secure communication from Canvas servers to the exam device}
 \end{figure}
+
+\clearpage
 
 \subsection{Storyboards}
 
@@ -223,14 +226,17 @@ The following storyboard illustrates the complete software flow a student experi
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.8\textwidth]{../artifacts/storyboard.png}
+    \includegraphics[width=0.76\textwidth]{../artifacts/storyboard.png}
     \caption{Student Workflow Storyboard: SEB Launch through Canvas Exam Completion}
 \end{figure}
 
-\newpage
 \subsection{Draft Schematics}
 
-TODO
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../artifacts/draftschematic.png}
+    \caption{Hardware Draft Schematic: High Level SBC Schematic with Banana Pi}
+\end{figure}
 
 %=============================================================================
 \newpage
