@@ -7,6 +7,9 @@
 \usepackage{parskip}
 \usepackage{url}
 \usepackage{float}
+\usepackage{caption}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
 
 \geometry{margin=1in}
 \setlength{\headheight}{42pt}
@@ -198,12 +201,18 @@ The following mockups illustrate each software screen a student will encounter d
 
 
 \subsection{Systems}
-
-TODO
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../artifacts/4.2 systems.png}
+    \caption{Layered architecture of the system showing hardware, OS, browser, and application layers}
+\end{figure}
 
 \subsection{Networking}
-
-TODO
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../artifacts/4.3 networks.png}
+    \caption{Network layers showing secure communication from Canvas servers to the exam device through the UF network}
+\end{figure}
 
 \subsection{Storyboards}
 
