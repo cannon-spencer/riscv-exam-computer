@@ -1,0 +1,3 @@
+[submodule "platform/reptilian-riscv"]
+	path = platform/reptilian-riscv
+	url = https://github.com/desanctis-n/reptilian-riscv.git
