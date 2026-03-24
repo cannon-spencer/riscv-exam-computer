@@ -24,13 +24,13 @@
 \begin{titlepage}
   \centering
   \vspace*{1in}
-  {\fontsize{25pt}{30pt}\selectfont\textbf{R1: Design Draft}\par}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{R2: Design Draft}\par}
   \vspace{0.5in}
   {\LARGE\textbf{EEL4907 CpE Design 1}\par}
   \vspace{0.35em}
   {\Large Hardened RISC-V Exam Computer\par}
   \vspace{0.3em}
-  {\Large March 11, 2026\par}
+  {\Large \today\par}
   \vspace{0.6in}
   {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
   \vspace{1in}
@@ -107,6 +107,26 @@ To mitigate these risks, the design incorporates a secure boot chain to detect s
     \item \textbf{Integrity:} Use RISC-V PMP (Physical Memory Protection) to isolate the SEB configuration keys from user-space memory.
 \end{itemize}
 
+\subsection{Hardware Candidate Analysis}
+The project evaluates two primary RISC-V Single Board Computers (SBCs) for the exam device. The selection is driven by the need for hardware-level security features and sufficient memory to handle the Chromium-based Safe Exam Browser (SEB) environment.
+
+\begin{table}[h]
+\centering
+\caption{Technical Comparison of Hardware Candidates}
+\label{tab:hw_comparison}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Feature} & \textbf{Banana Pi BPI-F3} & \textbf{Orange Pi RV} \\ \hline
+\textbf{SoC} & SpacemiT K1 (8-core) & StarFive JH7110 (4-core) \\ \hline
+\textbf{RAM} & 4GB LPDDR4X & 2GB LPDDR4 \\ \hline
+\textbf{Boot Flow} & Vendor-specific SPL/SBI & Vendor-specific SPL/SBI \\ \hline
+\end{tabular}
+\end{table}
+
+\textbf{Design Constraint: Platform Portability} \\
+The Orange Pi RV’s 2GB RAM risks OOM failures during Canvas exams. Due to non-standardized RISC-V firmware and OpenSBI, porting constitutes an architectural pivot exceeding the semester’s scope. Consequently, the Banana Pi is the tentative sole deployment target.
+
+\subsection{High-Level Task Breakdown}
 \begin{table}[h!]
 \centering
 \begin{tabularx}{\textwidth}{|l|X|}
@@ -129,6 +149,13 @@ To mitigate these risks, the design incorporates a secure boot chain to detect s
 
 \textbf{Description:} 
 A simple physical exam device for easy deployment (e.g., 3D-printed enclosure mounting the RISC-V board to the VESA mount on the back of a monitor, creating a compact ``all-in-one'' exam computer with only power, keyboard, and mouse).
+
+\textbf{Requirements \& Specifications:}
+\begin{itemize}
+    \item \textbf{Memory:} A minimum of 4GB RAM is preferred to ensure stability. While 2GB models (e.g., Orange Pi RV) are available, they risk session instability when running modern web-based Learning Management Systems.
+    \item \textbf{Firmware:} The device utilizes a custom-built Linux image. Due to the lack of architectural standardization in the RISC-V SBC ecosystem, the bootloader (U-Boot) and firmware stack are specifically tailored to the Banana Pi BPI-F3’s vendor-defined boot flow.
+    \item \textbf{Security:} Utilization of RISC-V Physical Memory Protection (PMP) to isolate the M-mode (Machine) security environment from the U-mode (User) browser environment.
+\end{itemize}
 
 \textbf{Accessibility, Usability, \& Maintenance:} 
 The hardware utilizes a standard VESA mount to ensure compatibility with existing university laboratory infrastructure.
