@@ -1,0 +1,139 @@
+\documentclass[10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{setspace}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{M1: Pre-Alpha Build}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{EEL4907 CpE Design 1}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large \today\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+\setstretch{0.97}
+
+%=============================================================================
+\section{Purpose, repository, and design alignment}
+%=============================================================================
+
+\textbf{M1 pre-alpha:} architectural skeleton (not a shippable product): how subsystems connect and what exists in-repo today versus the design-draft mockups. \textbf{Repository:} \url{https://github.com/cannon-spencer/riscv-exam-computer}.
+
+\paragraph{Where effort has gone vs.\ in-repo integration.}
+Most time so far is \textbf{hands-on research and bring-up}: SEB and Linux lockdown experiments, distribution and board testing, and tracing the official vs.\ third-party SEB ecosystem---work that does not yet appear as a single ``app'' in \texttt{exam-env/} but is necessary to choose a viable path. \textbf{Custom} kiosk/SEB-wrapper and BEK/CSK integration are \textbf{queued for the next implementation phase}; the repository already carries docs/LaTeX, an \texttt{exam-env/} placeholder, and the \texttt{platform/reptilian-riscv} submodule (\textbf{prior} Reptilian/Bananapi-F3 style boot/kernel/partition context). Later milestones may \textbf{lean Debian} alongside Linux SEB-class tooling; the final OS line is still open.
+
+\paragraph{SEB upstream references.}
+Official Safe Exam Browser org: \url{https://github.com/safeexambrowser}. Third-party Linux builds (e.g.\ v0.4.1): \url{https://github.com/Jvr2022/seb-linux/releases/tag/v0.4.1}. These inform Linux-on-RISC-V testing; they are not a guarantee of LMS/vendor support compared to official Windows/macOS/iOS SEB.
+
+%=============================================================================
+\section{Architectural skeleton (use case: Canvas exam session)}
+%=============================================================================
+
+Use case: student authenticates and completes a Canvas exam in a locked browser. Table~\ref{tab:subsystem} summarizes how \textbf{major subsystem concerns} connect to the planned structure (components, flows, boundaries). This is an architectural snapshot---not a claim that every mechanism is implemented or certified on hardware. The design-draft layered figure remains the visual reference; the table ties it to \texttt{exam-env/}, the platform submodule, and HTTPS/IPC.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.19\textwidth}X@{}}
+    \toprule
+    \textbf{Subsystem concern} & \textbf{Prepared structure (pre-alpha)} \\
+    \midrule
+    External interface &
+    Kiosk surface: full-screen browser + session shell; navigation mediated by planned Wayland kiosk + browser. Launch reads SEB/exam config and policy from persistent store (\texttt{exam-env/} / image path TBD). \\
+    Persistent state &
+    Store: SEB XML/plist, exam policy, image/boot metadata; layout tied to \texttt{platform/reptilian-riscv/} (partitions, FIT/verity direction). Feeds UI (what is shown) and internals (BEK/CSK, allowlists; SW-01--02, UI-01). \\
+    Internal systems &
+    Handling: config parse, kiosk enforcement, browser with BEK/CSK. Reads/writes state only on defined admin or verified paths. \\
+    Communication &
+    Channels: HTTPS (Canvas, IdP); local IPC (compositor, session, browser); optional admin UART/SSH. Trust boundaries documented; implementation partial. \\
+    Integrity \& resilience &
+    Plan: signed boot/FIT, dm-verity-style root, failed-verification handling, recovery via RO root or reimage (upstream notes in submodule). Pre-alpha: architecture only. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Subsystem wiring for the Canvas exam-session use case (pre-alpha skeleton).}
+  \label{tab:subsystem}
+\end{table}
+
+%=============================================================================
+\section{Effort, work completed, and tracking}
+%=============================================================================
+
+\noindent\textbf{Phase so far:} Substantial time in \textbf{research spikes, lab setup, and feasibility testing}: multiple OS and board paths, SEB and lockdown behavior, and scoping the official vs.\ experimental Linux SEB landscape. An end-to-end Canvas exam on the final RISC-V kiosk image is still ahead; the work below is the foundation for that integration.
+
+\noindent\textbf{Key accomplishments:}
+\begin{itemize}\setlength{\itemsep}{0.12em}
+  \item \textbf{Arch Linux desktop:} ran Safe Exam Browser to establish lockdown and configuration expectations (reference for a future Linux-native or wrapper path).
+  \item \textbf{Linux SEB landscape:} compared official Safe Exam Browser repositories with third-party Linux releases (URLs in Section~1); documented implications for LMS support and maintenance.
+  \item \textbf{Banana Pi:} Debian via manufacturer/tutorial; validated boot, storage, and networking on hardware aligned with the design draft.
+  \item \textbf{WSL vs.\ SEB:} characterized policy-relevant behavior on a general-purpose PC; supports requiring a \textbf{dedicated} exam device rather than student-owned machines.
+  \item \textbf{Repository:} integrated \texttt{platform/reptilian-riscv} submodule, documented clone steps, and reserved \texttt{exam-env/} for upcoming kiosk/SEB configuration work.
+\end{itemize}
+
+\noindent\textbf{JIRA snapshot (BAC-*):}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{2pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.12\textwidth}lX@{}}
+    \toprule
+    \textbf{Stat.} & \textbf{ID} & \textbf{Summary} \\
+    \midrule
+    Done & BAC-1 & Design draft: hardware / alternatives \\
+    IP & BAC-6,7,10 & SEB on Linux; kiosk path; SEB on Orange Pi \\
+    Todo & BAC-2 & 2nd BPi: vendor Linux (tutorial) \\
+    Todo & BAC-4,5,8,9 & PMP/OpenSBI/secure boot: BPi + Orange Pi + SoC hardening \\
+    \bottomrule
+  \end{tabularx}
+  \caption{JIRA (BAC) snapshot; full titles in tracker.}
+\end{table}
+
+\noindent\textbf{Evidence:} Git commits (submodule pointer, docs), this report, and dated test notes where applicable; full hour accounting per course policy.
+
+%=============================================================================
+\section{Known bugs, limitations, and support friction}
+%=============================================================================
+
+Pre-alpha gaps and \textbf{support-style friction} (not necessarily one ticket each). Mirror key points in \texttt{README.md} if required.
+
+\begin{itemize}\setlength{\itemsep}{0.12em}
+  \item \textbf{Integration depth:} Kiosk/BEK--CSK/compositor wiring is still ahead; current repo content is architecture, submodule context, and placeholders (Section~1).
+  \item \textbf{Target E2E:} Full Canvas exam on the locked RISC-V image not yet demonstrated; desk/lab tests do not prove LMS or key handshakes on the target SoC.
+  \item \textbf{SEB support model:} Official repos (\url{https://github.com/safeexambrowser}) center non-Linux; Linux trials (e.g.\ \url{https://github.com/Jvr2022/seb-linux/releases/tag/v0.4.1}) are third-party---Canvas/IT compatibility and long-term maintenance are open risks.
+  \item \textbf{Submodule vs.\ Debian:} Reptilian submodule vs.\ future Debian-first image may force redoing partitions, keys, and secure-boot plumbing; cost unknown.
+  \item \textbf{BSP/board noise:} BPi vs.\ Orange Pi, WiFi/UART, and vendor image quirks burn time as environment/support issues before exam logic.
+  \item \textbf{Security not demonstrated:} Secure boot, PMP, verity are goals only; submodule empty clone if \texttt{git clone} without \texttt{--recurse-submodules} (fix: \texttt{git submodule update --init --recursive}).
+\end{itemize}
+
+\end{document}
