@@ -1,0 +1,185 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{M2: Design Prototype}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{EEL4907 CpE Design 1}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large \today\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Effort Breakdown}
+%=============================================================================
+
+The following table summarizes work completed by each team member during the M2 prototype phase. Effort is tracked via timestamped Jira tickets (project BAC) and GitHub commits. Experimentation, failed attempts, and blockers are documented explicitly in Section~\ref{sec:bugs}.
+
+\begin{table}[h!]
+\centering
+\caption{Team Effort Breakdown}
+\label{tab:effort}
+\begin{tabularx}{\textwidth}{|l|X|l|l|}
+\hline
+\textbf{Member} & \textbf{Task(s)} & \textbf{Status} & \textbf{Est.\ Hours} \\ \hline
+Gabriel Velazquez &
+  seb-linux build on Orange Pi RV (riscv64, BAC-10); identified Qt6/GLib macro conflict and spell-check type mismatch compile errors; reported upstream; M2 documentation &
+  In Progress (hardware blocker) & $\sim$15 \\ \hline
+George Rushevich &
+  Orange Pi Debian Linux install and boot verification (BAC-3); Cage kiosk + SEB research (BAC-7); PMP/OpenSBI hardening research (BAC-4, BAC-5, BAC-8, BAC-9) &
+  In Progress & $\sim$18 \\ \hline
+Justin Reyes &
+  riscv64-compatible Chromium alternative research (BAC-11); SEB-on-Linux research and Arch Linux SEB demo (BAC-6) &
+  In Progress & $\sim$12 \\ \hline
+Cannon Spencer &
+  Banana Pi BPI-F3 secure boot chain (OpenSBI, U-Boot, kernel); repository setup; design documentation and design draft &
+  In Progress & $\sim$15 \\ \hline
+\end{tabularx}
+\end{table}
+
+\textit{Note: Nicholas DeSanctis (prior team member) currently holds the Orange Pi RV board to flash a custom Linux 6.6 kernel. This is the primary hardware blocker for BAC-10 and is expected to be resolved by April~30, 2026.}
+
+Repository: \url{https://github.com/cannon-spencer/riscv-exam-computer}
+
+%=============================================================================
+\section{Evidence of Soundness}
+%=============================================================================
+
+\subsection{Prior Art}
+
+Safe Exam Browser~\cite{safeexambrowser} (ETH Z\"{u}rich) is an established locked-browser solution for Windows, macOS, and iOS, providing the Browser Exam Key (BEK) and Configuration Security Key (CSK) handshakes used by Canvas. The open-source project \texttt{seb-linux}~\cite{seblinux} provides a community Linux port targeting the same handshake protocol, with a WebKitGTK fallback backend for architectures where Qt6 WebEngine (Chromium) is unavailable. The Cage Wayland compositor~\cite{cage_kiosk} provides a proven single-application kiosk environment on Linux. These projects collectively establish that the SEB kiosk approach on Linux is viable prior to any novel work by this team.
+
+\subsection{Empirical Evidence --- SEB Lockdown on Arch Linux}
+
+\textbf{Goal:} Confirm that SEB's lockdown behavior---fullscreen enforcement and process blacklisting---functions correctly on a Linux x86 machine before targeting RISC-V hardware.
+
+\textbf{Methodology:} SEB was installed and launched on an Arch Linux machine. The team attempted to exit the browser using standard keyboard shortcuts and window manager controls. Blacklisted applications (Discord, OBS) were also launched and SEB's response was observed.
+
+\textbf{Results:} SEB launched successfully in fullscreen kiosk mode with no visible exit button and all standard escape shortcuts blocked. When Discord was running prior to SEB launch, SEB correctly detected it and refused to start. The same behavior was observed with OBS. These results were captured and presented in the P1 Prototype presentation (Slide~9).
+
+\textbf{Interpretation:} The core lockdown behavior of SEB on Linux is confirmed functional. The process blacklisting mechanism works as designed. This validates the software approach and provides a reproducible baseline for subsequent RISC-V integration.
+
+\subsection{Empirical Evidence --- Orange Pi RV Debian Boot}
+
+\textbf{Goal:} Confirm that a standard Debian Linux environment can run on the target riscv64 hardware.
+
+\textbf{Methodology:} Debian sid (riscv64) was installed on the Orange Pi RV. \texttt{apt} sources were configured to \texttt{http://deb.debian.org/debian sid main}, SSH access was confirmed via PuTTY from a Windows host (192.168.0.61), and package installation was verified with \texttt{apt-get}.
+
+\textbf{Results:} The board boots successfully into Debian sid. SSH access is functional. riscv64 packages install correctly from the Debian mirrors.
+
+\textbf{Interpretation:} The hardware is confirmed capable of running a Debian Linux environment. This establishes the foundation for the full software stack and confirms package availability for WebKitGTK and Qt6 on riscv64.
+
+\subsection{Empirical Evidence --- seb-linux Build Attempt on riscv64}
+
+\textbf{Goal:} Build \texttt{seb-linux} on the Orange Pi RV using the WebKitGTK fallback backend, required because Qt6 WebEngine (Chromium) has no riscv64 package support.
+
+\textbf{Methodology:} The following packages were installed: \texttt{qt6-base-dev}, \texttt{libwebkit2gtk-4.1-dev} ($\sim$2.52.1), \texttt{libgtk-3-dev}. \texttt{qmake6} was run and correctly detected the WebKitGTK fallback, printing: \textit{``Building with WebKitGTK fallback (QtWebEngine not found or unsupported).''} \texttt{make} was then executed.
+
+\textbf{Results:} The build failed with two compile errors in \texttt{src/browser/engines/webkitgtk/}:
+\begin{enumerate}
+    \item The Qt6 \texttt{signals} macro conflicted with \texttt{GDBusSignalInfo::signals} and \texttt{GtkBindingSet::signals} in \texttt{gdbusintrospection.h} and \texttt{gtkbindings.h} within \texttt{webkitgtk\_view.cpp}.
+    \item \texttt{webkitgtk\_profile.cpp} passed \texttt{const char*} to \texttt{webkit\_web\_context\_set\_spell\_checking\_languages()}, which expects \texttt{const gchar* const*} (a null-terminated array).
+\end{enumerate}
+Both bugs were reported to the upstream maintainer via a GitHub issue. The maintainer has since claimed fixes were pushed to the repository.
+
+\textbf{Interpretation:} The build infrastructure and dependency chain are confirmed correct---\texttt{qmake6} resolved the fallback successfully and all dependencies were satisfied. The identified bugs are shallow compile-time issues with known, targeted fixes (\texttt{\#undef signals} guard and a one-element array wrapper respectively). Full build verification on the target hardware is pending resolution of the hardware access blocker described in Section~\ref{sec:bugs}.
+
+%=============================================================================
+\section{Project State Summary}
+%=============================================================================
+
+\subsection{External Interfaces}
+
+The student-facing interface is the SEB kiosk browser, confirmed functional on Arch Linux (Section~2.2). The complete student interaction flow---device power-on, SEB launch, UF e-Learning login, Gatorlink authentication, Duo two-factor authentication, and Canvas exam session---is documented via UI mockups in the R2 Design Draft (Section~4.1, Figure~1). A system integrity check failure screen is also designed and mockup-complete. The SEB chrome (MY MACHINE / CLOSE / REVOKE controls visible in all mockups) provides the only permitted user interactions outside of the exam content itself.
+
+\subsection{Internal Systems}
+
+The system is structured across four layers: Hardware (RISC-V SBC, onboard RAM, eMMC storage), OS and Boot (hardened Linux, vendor bootloader, custom read-only partitions), Kiosk/Session (Cage Wayland compositor, process policy, shortcut lockdown), and Application (SEB for Linux, Canvas exam UI). The hardware schematic in the R2 Design Draft (Figure~5) details the SpacemiT K1 SoC connections: LPDDR4 RAM via bus, eMMC flash (16GB, read-only OS image), USB 2.0/3.0 controller for keyboard and mouse, HDMI 1.4 output, Dual Gigabit Ethernet, GPIO header, and the highlighted PMP \& Crypto Engine secure section. Communication between the exam device and Canvas occurs over HTTPS/TLS via the university network, as shown in the R2 Design Draft networking diagram (Figure~3).
+
+\textbf{Resilience:} The eMMC is mounted read-only, providing a self-healing property whereby any accidental or malicious filesystem changes are wiped on power cycle. The secure boot chain (Boot ROM $\rightarrow$ FSBL $\rightarrow$ OpenSBI $\rightarrow$ U-Boot $\rightarrow$ kernel) uses SHA-256/RSA-2048 signature verification at each stage to detect tampering before the OS is loaded.
+
+%=============================================================================
+\newpage
+\section{Known Bugs and Blockers}
+\label{sec:bugs}
+%=============================================================================
+
+Per project documentation requirements, all known bugs are recorded below. Failure to resolve these prior to the final milestone will be noted in subsequent reports.
+
+\begin{table}[h!]
+\centering
+\caption{Known Bugs and Blockers}
+\label{tab:bugs}
+\begin{tabularx}{\textwidth}{|p{1cm}|X|p{3.5cm}|}
+\hline
+\textbf{ID} & \textbf{Description} & \textbf{Status} \\ \hline
+BUG-01 &
+  Qt6 \texttt{signals} macro conflicts with \texttt{GDBusSignalInfo::signals} and \texttt{GtkBindingSet::signals} in \texttt{webkitgtk\_view.cpp}. Fix: add \texttt{\#undef signals} before GTK/GLib header includes. &
+  Reported upstream; fix claimed; not yet verified on hardware \\ \hline
+BUG-02 &
+  \texttt{webkitgtk\_profile.cpp} passes \texttt{const char*} to \texttt{webkit\_web\_context\_set\_spell\_checking\_languages()}, which expects \texttt{const gchar* const*}. Fix: wrap in a null-terminated one-element array. &
+  Reported upstream; fix claimed; not yet verified on hardware \\ \hline
+BLK-01 &
+  Orange Pi RV board currently held by Nicholas DeSanctis for custom Linux 6.6 kernel work. Hardware is unavailable for seb-linux build verification and integration testing. &
+  Expected resolved by April~30, 2026 \\ \hline
+BLK-02 &
+  Qt6 WebEngine (Chromium) has no riscv64 package in Debian or upstream. WebKitGTK fallback backend is required for all riscv64 builds of seb-linux. &
+  Architectural constraint; WebKitGTK path adopted as permanent solution \\ \hline
+\end{tabularx}
+\end{table}
+
+\begin{thebibliography}{9}
+
+\bibitem{safeexambrowser}
+Safe Exam Browser. ETH Z\"{u}rich. [Online]. Available: \url{https://github.com/safeexambrowser}. Accessed Mar. 2026.
+
+\bibitem{seb_concept}
+ETH Z\"{u}rich, ``Safe Exam Browser: Concept and Architecture,'' SafeExamBrowser.org, 2025. [Online]. Available: \url{https://safeexambrowser.org/about_overview_en.html}. Accessed Mar. 2026.
+
+\bibitem{seblinux}
+Jvr2022, ``seb-linux: Safe Exam Browser for Linux,'' GitHub Repository, 2025. [Online]. Available: \url{https://github.com/Jvr2022/seb-linux}.
+
+\bibitem{spacemit_k1}
+SpacemiT, ``SpacemiT K1 8 core RISC-V chip Brief,'' SpacemiT Technical Documentation, 2024. [Online]. Available: \url{https://docs.banana-pi.org/en/BPI-F3/SpacemiT_K1}.
+
+\bibitem{riscv_priv}
+RISC-V International, ``The RISC-V Instruction Set Manual, Volume II: Privileged Architecture,'' Document Version 20211203, Dec. 2021. [Online]. Available: \url{https://www.scs.stanford.edu/~zyedidia/docs/riscv/riscv-privileged.pdf}.
+
+\bibitem{cage_kiosk}
+J. Deitrick, ``Cage: A Wayland kiosk compositor,'' GitHub Repository, 2025. [Online]. Available: \url{https://github.com/cage-kiosk/cage}.
+
+\end{thebibliography}
+
+\end{document}
