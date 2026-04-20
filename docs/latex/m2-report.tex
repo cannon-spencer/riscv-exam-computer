@@ -44,43 +44,60 @@
 \section{Effort Breakdown}
 %=============================================================================
 
-The following table summarizes work completed by each team member during the M2 prototype phase. Effort is tracked via timestamped Jira tickets (project BAC) and GitHub commits. Experimentation, failed attempts, and blockers are documented explicitly in Section~\ref{sec:bugs}.
+For M2 our time went mostly into \textbf{integration and testing}: imaging boards, working over UART and Ethernet, installing packages and toolchains on riscv64, running SEB on Arch as a reference, and pushing \texttt{seb-linux} builds on the Orange Pi. That work is often slow and repetitive in the lab even when it does not show up as many large commits on \texttt{main}.
+
+\subsection{Git work log}
+\label{sec:testing-log}
+
+\noindent Time-stamped lab and integration notes are in \texttt{docs/worklog/}: \url{https://github.com/cannon-spencer/riscv-exam-computer/tree/main/docs/worklog}
 
 \begin{table}[h!]
 \centering
-\caption{Team Effort Breakdown}
+\caption{Team Effort Breakdown (M2 scope)}
 \label{tab:effort}
-\begin{tabularx}{\textwidth}{|l|X|l|l|}
+\begin{tabularx}{\textwidth}{|l|X|l|}
 \hline
-\textbf{Member} & \textbf{Task(s)} & \textbf{Status} & \textbf{Est.\ Hours} \\ \hline
+\textbf{Member} & \textbf{Primary themes (incl.\ setup \& testing)} & \textbf{M2 hrs (est.)} \\ \hline
 Gabriel Velazquez &
-  seb-linux build on Orange Pi RV (riscv64, BAC-10); identified Qt6/GLib macro conflict and spell-check type mismatch compile errors; reported upstream; M2 documentation &
-  In Progress (hardware blocker) & $\sim$15 \\ \hline
+  \texttt{seb-linux} build on Orange Pi RV (riscv64, BAC-10); Qt6/GLib macro conflict and spell-check type mismatch identified; upstream report; M2 report \& documentation &
+  55--65 \\ \hline
 George Rushevich &
-  Orange Pi Debian Linux install and boot verification (BAC-3); Cage kiosk + SEB research (BAC-7); PMP/OpenSBI hardening research (BAC-4, BAC-5, BAC-8, BAC-9) &
-  In Progress & $\sim$15 \\ \hline
+  Orange Pi Debian install, boot, and network verification (BAC-3); Cage kiosk + SEB research (BAC-7); PMP/OpenSBI hardening research (BAC-4, BAC-5, BAC-8, BAC-9) &
+  47--57 \\ \hline
 Justin Reyes &
-  riscv64-compatible Chromium alternative research (BAC-11); SEB-on-Linux research and Arch Linux SEB demo (BAC-6) &
-  In Progress & $\sim$15 \\ \hline
+  riscv64-compatible Chromium alternatives (BAC-11); SEB-on-Linux research; Arch Linux SEB lockdown demo (BAC-6) &
+  45--50 \\ \hline
 Cannon Spencer &
-  Banana Pi BPI-F3 secure boot chain (OpenSBI, U-Boot, kernel); repository setup; design documentation and design draft &
-  In Progress & $\sim$15 \\ \hline
+  Orange Pi RV lab environment setup and testing (image/SD iterations, desktop/GUI path); VNC server setup and validation for remote GUI smoke tests; repository structure; design documentation and R2 design draft alignment &
+  48--58 \\ \hline
 \end{tabularx}
 \end{table}
 
-\textit{Note: Nicholas DeSanctis (prior team member) currently holds the Orange Pi RV board to flash a custom Linux 6.6 kernel. This is the primary hardware blocker for BAC-10 and is expected to be resolved by April~30, 2026.}
+\noindent M2 is still \textbf{in progress}. Lab integration often leaves more trace in \texttt{docs/worklog/} and Jira than in bulky \texttt{main} commits. Details on hardware/software issues: Section~\ref{sec:bugs}. \textit{Orange Pi RV} temporarily with prior teammate \textbf{Nicholas DeSanctis} (Linux~6.6 kernel flash, BAC-10); expected back by April~30, 2026.
 
-Repository: \url{https://github.com/cannon-spencer/riscv-exam-computer}
+\noindent Repository: \url{https://github.com/cannon-spencer/riscv-exam-computer}
 
+\newpage
 %=============================================================================
 \section{Evidence of Soundness}
 %=============================================================================
+
+\noindent The empirical subsections below match Section~\ref{sec:testing-log} and the logs under \texttt{docs/worklog/}.
 
 \subsection{Prior Art}
 
 Safe Exam Browser~\cite{safeexambrowser} (ETH Z\"{u}rich) is an established locked-browser solution for Windows, macOS, and iOS, providing the Browser Exam Key (BEK) and Configuration Security Key (CSK) handshakes used by Canvas. The open-source project \texttt{seb-linux}~\cite{seblinux} provides a community Linux port targeting the same handshake protocol, with a WebKitGTK fallback backend for architectures where Qt6 WebEngine (Chromium) is unavailable. The Cage Wayland compositor~\cite{cage_kiosk} provides a proven single-application kiosk environment on Linux. These projects collectively establish that the SEB kiosk approach on Linux is viable prior to any novel work by this team.
 
+\subsection{Theoretical Background}
+
+Aspects of the final system are not yet implemented as production code on the RISC-V target; this subsection summarizes literature-backed foundations for those gaps.
+
+\textbf{Exam trust model.} SEB's documented architecture~\cite{seb_concept} explains how configuration files, URL filters, and keys constrain the browser relative to the LMS. That model underpins our requirement to reproduce BEK/CSK behavior on Linux even when the official SEB build is not vendor-supported on riscv64.
+
+\textbf{Privilege and isolation on RISC-V.} The RISC-V privileged architecture~\cite{riscv_priv} defines machine/supervisor/user modes and physical memory protection (PMP) as building blocks for enforcing boundaries between firmware, kernel, and user sessions. Our design references PMP and a verified boot path as \emph{future} hardening; the theory justifies why those mechanisms are appropriate for protecting exam configuration and reducing tampering surface, even though M2 does not complete end-to-end PMP integration.
+
 \subsection{Empirical Evidence --- SEB Lockdown on Arch Linux}
+\label{sec:empirical-arch}
 
 \textbf{Goal:} Confirm that SEB's lockdown behavior---fullscreen enforcement and process blacklisting---functions correctly on a Linux x86 machine before targeting RISC-V hardware.
 
@@ -91,16 +108,18 @@ Safe Exam Browser~\cite{safeexambrowser} (ETH Z\"{u}rich) is an established lock
 \textbf{Interpretation:} The core lockdown behavior of SEB on Linux is confirmed functional. The process blacklisting mechanism works as designed. This validates the software approach and provides a reproducible baseline for subsequent RISC-V integration.
 
 \subsection{Empirical Evidence --- Orange Pi RV Debian Boot}
+\label{sec:empirical-opi}
 
 \textbf{Goal:} Confirm that a standard Debian Linux environment can run on the target riscv64 hardware.
 
-\textbf{Methodology:} Debian sid (riscv64) was installed on the Orange Pi RV. \texttt{apt} sources were configured to \texttt{http://deb.debian.org/debian sid main}, SSH access was confirmed via PuTTY from a Windows host (192.168.0.61), and package installation was verified with \texttt{apt-get}.
+\textbf{Methodology:} Debian sid (riscv64) was installed on the Orange Pi RV. \texttt{apt} sources were configured to \texttt{http://deb.debian.org/debian sid main}. SSH was confirmed from lab hosts (including PuTTY on Windows at 192.168.0.61 and direct Ethernet/USB--LAN links from macOS with Internet Sharing). Package installation was verified with \texttt{apt-get}.
 
 \textbf{Results:} The board boots successfully into Debian sid. SSH access is functional. riscv64 packages install correctly from the Debian mirrors.
 
 \textbf{Interpretation:} The hardware is confirmed capable of running a Debian Linux environment. This establishes the foundation for the full software stack and confirms package availability for WebKitGTK and Qt6 on riscv64.
 
 \subsection{Empirical Evidence --- seb-linux Build Attempt on riscv64}
+\label{sec:empirical-seblinux}
 
 \textbf{Goal:} Build \texttt{seb-linux} on the Orange Pi RV using the WebKitGTK fallback backend, required because Qt6 WebEngine (Chromium) has no riscv64 package support.
 
@@ -119,15 +138,19 @@ Both bugs were reported to the upstream maintainer via a GitHub issue. The maint
 \section{Project State Summary}
 %=============================================================================
 
-\subsection{External Interfaces}
+\subsection{External Interfaces (artifact vs.\ design)}
 
-The student-facing interface is the SEB kiosk browser, confirmed functional on Arch Linux (Section~2.2). The complete student interaction flow---device power-on, SEB launch, UF e-Learning login, Gatorlink authentication, Duo two-factor authentication, and Canvas exam session---is documented via UI mockups in the R2 Design Draft (Section~4.1, Figure~1). A system integrity check failure screen is also designed and mockup-complete. The SEB chrome (MY MACHINE / CLOSE / REVOKE controls visible in all mockups) provides the only permitted user interactions outside of the exam content itself.
+\textbf{Demonstrated in M2 (interactive, user-visible behavior).} On x86 Linux, SEB exhibits predictable lockdown behavior: fullscreen retention, blocked escape shortcuts, and refusal to start when blacklisted applications are present (Section~\ref{sec:empirical-arch}). Those observations map to the course rubric's \emph{presentation}, \emph{perception}, and \emph{usability} expectations for the interactive path we could exercise in the lab: state is implied by fullscreen enforcement and clear failure-to-start messaging when policy is violated.
+
+\textbf{Designed but not fully wired on RISC-V in M2.} The end-to-end student flow---device power-on, SEB launch, UF e-Learning login, Gatorlink authentication, Duo, and Canvas session---is documented as UI mockups in the R2 Design Draft (Section~4.1, Figure~1), including integrity-failure chrome (MY MACHINE / CLOSE / REVOKE). M2 establishes OS and toolchain feasibility on riscv64 (Section~\ref{sec:empirical-opi}) and isolates concrete blockers for \texttt{seb-linux} on-device (Section~\ref{sec:empirical-seblinux}); full Canvas E2E on the locked-down RISC-V image remains future work, as required by honesty in Section~\ref{sec:bugs}.
 
 \subsection{Internal Systems}
 
-The system is structured across four layers: Hardware (RISC-V SBC, onboard RAM, eMMC storage), OS and Boot (hardened Linux, vendor bootloader, custom read-only partitions), Kiosk/Session (Cage Wayland compositor, process policy, shortcut lockdown), and Application (SEB for Linux, Canvas exam UI). The hardware schematic in the R2 Design Draft (Figure~5) details the SpacemiT K1 SoC connections: LPDDR4 RAM via bus, eMMC flash (16GB, read-only OS image), USB 2.0/3.0 controller for keyboard and mouse, HDMI 1.4 output, Dual Gigabit Ethernet, GPIO header, and the highlighted PMP \& Crypto Engine secure section. Communication between the exam device and Canvas occurs over HTTPS/TLS via the university network, as shown in the R2 Design Draft networking diagram (Figure~3).
+The system is structured across four layers: Hardware (RISC-V SBC, onboard RAM, eMMC storage), OS and Boot (Linux, vendor bootloader, partitioning), Kiosk/Session (Cage Wayland compositor, process policy, shortcut lockdown), and Application (\texttt{seb-linux} / SEB-class client, Canvas exam UI). The Banana Pi deployment target uses the SpacemiT K1-class SoC~\cite{spacemit_k1}. The R2 Design Draft hardware schematic (Figure~5) summarizes expected connections: LPDDR4, eMMC, USB for keyboard/mouse, HDMI, Ethernet, GPIO, and a notional secure-engine block for future hardening.
 
-\textbf{Resilience:} The eMMC is mounted read-only, providing a self-healing property whereby any accidental or malicious filesystem changes are wiped on power cycle. The secure boot chain (Boot ROM $\rightarrow$ FSBL $\rightarrow$ OpenSBI $\rightarrow$ U-Boot $\rightarrow$ kernel) uses SHA-256/RSA-2048 signature verification at each stage to detect tampering before the OS is loaded.
+\textbf{Communication mechanisms.} Runtime traffic to Canvas and the identity provider is \textbf{HTTPS/TLS} on the campus LAN (R2 networking diagram, Figure~3). Administrative bring-up uses \textbf{SSH} over Ethernet; \textbf{UART} is available for low-level recovery (design documentation). Protocol choices are standard; M2 focus was proving link and package viability on riscv64.
+
+\textbf{Resilience (target vs.\ M2 reality).} \textbf{Design intent:} read-only root where possible so transient misuse is cleared on reboot, and a verified boot chain (Boot ROM $\rightarrow$ FSBL $\rightarrow$ OpenSBI $\rightarrow$ U-Boot $\rightarrow$ kernel) with signature checks consistent with the design draft. \textbf{M2 status:} Debian boot, SSH, and build attempts are demonstrated (Sections~\ref{sec:empirical-opi}--\ref{sec:empirical-seblinux}); \textbf{end-to-end measured secure boot, dm-verity-style rootfs integrity, and hardware-backed key storage are not yet demonstrated} on the prototype hardware---they remain documented targets rather than completed verification.
 
 %=============================================================================
 \newpage
