@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Build .tex from docs/latex/ -> aux files in docs/build/, PDFs in docs/pdf/
+# Build .tex from docs/latex/ -> aux + PDFs in docs/build/ (ignored).
+# CI publishes copies to docs/pdfs/.
 #   ./docs/build.sh               # build all
 #   ./docs/build.sh design-draft  # build one
 
 set -e
 cd "$(dirname "$0")/latex"
-mkdir -p ../build ../pdf
+mkdir -p ../build
 
 if ! command -v pdflatex &>/dev/null; then
   echo "pdflatex not found. Install MacTeX or TeX Live." >&2
@@ -27,5 +28,4 @@ for f in "$@"; do
   pdflatex -output-directory=../build "$f"
 done
 
-mv ../build/*.pdf ../pdf/ 2>/dev/null || true
-echo "PDFs in docs/pdf/ — build artifacts in docs/build/"
+echo "PDFs in docs/build/ — CI publishes to docs/pdfs/"

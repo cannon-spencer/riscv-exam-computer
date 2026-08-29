@@ -1,3 +1,2 @@
-# Local LaTeX build output (CI commits to docs/pdfs/)
+# Local LaTeX output (CI commits published PDFs to docs/pdfs/)
 docs/build/
-docs/pdf/
