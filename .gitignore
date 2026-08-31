@@ -1,2 +1,8 @@
 # Local LaTeX output (CI commits published PDFs to docs/pdfs/)
 docs/build/
+
+# Rust
+exam-env/seb-agent/target/
+
+# macOS
+.DS_Store
