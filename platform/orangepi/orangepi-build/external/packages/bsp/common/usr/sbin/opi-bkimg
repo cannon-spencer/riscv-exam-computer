@@ -1,0 +1,279 @@
+#!/bin/bash
+
+OFFSET=32
+image=/mnt/backup.img
+type=83
+next=$OFFSET
+rootpart=1
+overlaypart=2
+ROOTFS_TYPE=ext4
+OVERLAYFS_TYPE=ext4
+bootfs=
+logfile="/var/log/backup.log"
+OVERLAYFS_SIZE=256
+USE_OVERLAYFS=0
+
+# script configuration
+CWD="/usr/lib/nand-sata-install"
+EX_LIST="${CWD}/exclude.txt"
+[[ -f /usr/lib/u-boot/platform_install.sh ]] && source /usr/lib/u-boot/platform_install.sh
+[[ -f /etc/orangepi-release ]] && source /etc/orangepi-release
+
+if [[ "$1" == "overlayfs" ]]; then
+	USE_OVERLAYFS=1
+fi
+
+if [[ $EUID -ne 0 ]]; then
+	echo 'This tool must run as root. Exiting ...' >&2
+	exit 14
+fi
+
+[[ -f "$image" ]] && rm "$image"
+
+# define makefs and mount options
+declare -A mkopts mountopts
+# for ARMv7 remove 64bit feature from default mke2fs format features
+if [[ $LINUXFAMILY =~ sun50iw6|sun50iw2|sun50iw1 && $BRANCH == legacy ]]; then
+	mkopts[ext2]='-O ^64bit -qF'
+	mkopts[ext3]='-O ^64bit -qF'
+	mkopts[ext4]='-O ^64bit -qF'
+else
+	mkopts[ext2]='-qF'
+	mkopts[ext3]='-qF'
+	mkopts[ext4]='-qF'
+fi
+mkopts[btrfs]='-f'
+mkopts[f2fs]='-f'
+
+mountopts[ext2]='defaults,noatime,commit=600,errors=remount-ro,x-gvfs-hide	0	1'
+mountopts[ext3]='defaults,noatime,commit=600,errors=remount-ro,x-gvfs-hide	0	1'
+mountopts[ext4]='defaults,noatime,commit=600,errors=remount-ro,x-gvfs-hide	0	1'
+mountopts[btrfs]='defaults,noatime,commit=600,compress=lzo,x-gvfs-hide			0	2'
+mountopts[f2fs]='defaults,noatime,x-gvfs-hide	0	2'
+
+
+function display_alert()
+{
+
+        local tmp=""
+        [[ -n $2 ]] && tmp="[\e[0;33m $2 \x1B[0m]"
+
+        case $3 in
+                err)
+                echo -e "[\e[0;31m error \x1B[0m] $1 $tmp"
+                ;;
+
+                wrn)
+                echo -e "[\e[0;35m warn \x1B[0m] $1 $tmp"
+                ;;
+
+                ext)
+                echo -e "[\e[0;32m o.k. \x1B[0m] \e[1;32m$1\x1B[0m $tmp"
+                ;;
+
+                info)
+                echo -e "[\e[0;32m o.k. \x1B[0m] $1 $tmp"
+                ;;
+
+                *)
+                echo -e "[\e[0;32m .... \x1B[0m] $1 $tmp"
+                ;;
+        esac
+}
+
+stop_running_services()
+{
+	systemctl --state=running | awk -F" " '/.service/ {print $1}' | sort -r | \
+		grep -E -e "$1" | while read ; do
+		echo -e "\nStopping ${REPLY} \c"
+		systemctl stop ${REPLY} 2>&1
+	done
+}
+
+display_alert "Starting backup to image" "$image" "info"
+
+rootfs_size=$(df -BM | grep ^/dev | head -1 | awk '{print $3}' | tr -cd '[0-9]. \n')
+display_alert "Current rootfs size" "$rootfs_size MiB" "info"
+
+imagesize=$(($rootfs_size + $OFFSET))
+
+sdsize=$(bc -l <<< "scale=0; ((($imagesize * 1.35) / 1 + 0) / 4 + 1) * 4")
+
+if [[ $USE_OVERLAYFS -eq 1 ]]; then
+	display_alert "Overlayfs size" "${OVERLAYFS_SIZE}MB" "info"
+	sdsize=$(($sdsize + $OVERLAYFS_SIZE))
+fi
+
+mnt_free=$(df -BM /mnt | grep ^/dev | head -1 | awk '{print $4}' | tr -cd '[0-9]. \n')
+
+if [[ "$mnt_free" -lt "$sdsize" ]]; then
+	display_alert "Not enough space in /mnt" "Required: ${sdsize}MiB, Available: ${mnt_free}MiB" "err"
+	exit 1
+fi
+
+cleanup() {
+	if [[ -d "${TempDir}" ]] && findmnt -r "${TempDir}/rootfs" > /dev/null; then
+		display_alert "Unmounting" "${TempDir}/rootfs" "info"
+		umount "${TempDir}"/bootfs
+		umount "${TempDir}"/rootfs
+		rm -r ${TempDir}
+		losetup -d $LOOP
+	fi
+
+	[[ -d "${TempDir}" ]] && rm -r "${TempDir}"
+
+	exit
+}
+
+trap cleanup EXIT INT
+display_alert "Creating blank image for rootfs" "$sdsize MiB" "info"
+dd if=/dev/zero bs=1M status=none count=$sdsize | pv -p -b -r -s $(($sdsize * 1024 * 1024)) -N "[ .... ] dd" | dd status=none of=$image
+
+if [[ $USE_OVERLAYFS -eq 1 ]]; then
+	rootfs_size=$(($sdsize - $OVERLAYFS_SIZE - $OFFSET))
+	overlay_start=$(($next + $rootfs_size))
+	display_alert "Creating partitions" "root: $ROOTFS_TYPE, overlay: $OVERLAYFS_TYPE" "info"
+	{
+		echo "$rootpart : name=\"rootfs\", start=${next}MiB, size=${rootfs_size}MiB, type=${type}"
+		echo "$overlaypart : name=\"overlayfs\", start=${overlay_start}MiB, size=${OVERLAYFS_SIZE}MiB, type=${type}"
+	} | sfdisk $image >> "$logfile" 2>&1
+else
+display_alert "Creating partitions" "${bootfs:+/boot: $bootfs }root: $ROOTFS_TYPE" "info"
+{
+	echo "$rootpart : name=\"rootfs\", start=${next}MiB, type=${type}"
+} | sfdisk $image >> "$logfile" 2>&1
+fi
+
+LOOP=$(losetup -fP --show $image)
+rootdevice="${LOOP}p${rootpart}"
+
+display_alert "Creating rootfs" "$ROOTFS_TYPE on $rootdevice"
+
+mkfs.ext4 -q -m 2 -O '^64bit,^metadata_csum' -L opi_root $rootdevice
+
+[[ $ROOTFS_TYPE == ext4 ]] && tune2fs -o journal_data_writeback $rootdevice > /dev/null
+
+if [[ $USE_OVERLAYFS -eq 1 ]]; then
+	overlaydevice="${LOOP}p${overlaypart}"
+	display_alert "Creating overlayfs" "$OVERLAYFS_TYPE on $overlaydevice"
+	mkfs.ext4 -q -m 0 -O '^64bit,^metadata_csum' -L opi_overlay $overlaydevice
+fi
+
+TempDir=$(mktemp -d /mnt/${0##*/}.XXXXXX || exit 2)
+
+sync && mkdir -p "${TempDir}"/bootfs "${TempDir}"/rootfs
+
+( mount -o compress-force=zlib "${rootdevice}" "${TempDir}"/rootfs 2> /dev/null || mount "${rootdevice}" "${TempDir}"/rootfs )
+mount  $rootdevice "${TempDir}"/bootfs
+
+# stop running services
+echo -e "\nFiles currently open for writing:" >> $logfile
+lsof / | awk 'NR==1 || $4~/[0-9][uw]/' | grep -v "^COMMAND" >> $logfile
+echo -e "\nTrying to stop running services to minimize open files:\c" >> $logfile
+stop_running_services "nfs-|smbd|nmbd|winbind|ftpd|netatalk|monit|cron|webmin|rrdcached" >> $logfile
+stop_running_services "fail2ban|ramlog|folder2ram|postgres|mariadb|mysql|postfix|mail|nginx|apache|snmpd" >> $logfile
+pkill dhclient 2>/dev/null
+LANG=C echo -e "\n\nChecking again for open files:" >> $logfile
+lsof / | awk 'NR==1 || $4~/[0-9][uw]/' | grep -v "^COMMAND" >> $logfile
+
+TODO=$(rsync -ahvrltDn --delete --stats --exclude-from=$EX_LIST / "${TempDir}"/rootfs | grep "Number of files:"|awk '{print $4}' | tr -d '.,')
+echo -e "\nCopying ${TODO} files to $rootdevice. \c" >> $logfile
+#display_alert "Copying ${TODO} files to" "/"
+
+# creating rootfs
+# Speed copy increased x10
+ # Variables for interfacing with rsync progress
+nsi_conn_path="${TempDir}/nand-sata-install"
+nsi_conn_done="${nsi_conn_path}/done"
+nsi_conn_progress="${nsi_conn_path}/progress"
+mkdir -p "${nsi_conn_path}"
+echo 0 >"${nsi_conn_progress}"
+echo no >"${nsi_conn_done}"
+
+ # Launch rsync in background
+{ \
+rsync -avrltD --delete --exclude-from=$EX_LIST / "${TempDir}"/rootfs | \
+nl | awk '{ printf "%.0f\n", 100*$1/"'"$TODO"'" }' \
+> "${nsi_conn_progress}" ;
+ # save exit code from rsync
+echo  ${PIPESTATUS[0]} >"${nsi_conn_done}"
+} &
+
+ # while variables
+rsync_copy_finish=0
+rsync_progress=0
+prev_progress=0
+rsync_done=""
+while [ "${rsync_copy_finish}" -eq 0 ]; do
+        # Sometimes reads the progress file while writing and only partial numbers (like 1 when is 15)
+        prev_progress=${rsync_progress}
+        rsync_progress=$(tail -n1 "${nsi_conn_progress}")
+        if [[ -z ${rsync_progress} ]]; then
+                rsync_progress=${prev_progress}
+        fi
+        if [ ${prev_progress} -gt ${rsync_progress} ]; then
+                rsync_progress=${prev_progress}
+        fi
+
+        echo "${rsync_progress}"
+        # finish the while if the rsync is finished
+        rsync_done=$(cat ${nsi_conn_done})
+        if [[ "${rsync_done}" != "no" ]]; then
+                if [[ ${rsync_done} -eq 0 ]]; then
+                        rm -rf "${nsi_conn_path}"
+                        rsync_copy_finish=1
+                else
+                        # if rsync return error
+                        echo "Error: could not copy rootfs files, exiting"
+                        exit 4
+                fi
+        else
+                sleep 0.5
+        fi
+
+done | \
+while read i; do
+    width=30
+    num_hash=$((i * width / 100))
+    bar=$(printf "%-${width}s" "#" | tr ' ' '#')
+    printf "\r[\e[0;32m .... \x1B[0m] Copying "$TODO" file to [\e[0;33m / \x1B[0m] [%-${width}s] %3d%%" "${bar:0:num_hash}" "$i"
+done
+echo ""
+
+#pv -l -s 100 -p  -e -N "[ .... ] Copying 48304 files to [ / ]" > /dev/null
+
+#rsync --info=progress2 -arltD --delete --exclude-from=$EX_LIST / "${TempDir}"/rootfs
+
+rsync -avrltD --delete --exclude-from=$EX_LIST / "${TempDir}"/rootfs >/dev/null 2>&1
+
+display_alert "Re-enabling" "orangepi-resize-filesystem"
+chroot ${TempDir}/rootfs/ /bin/bash -c "systemctl --quiet enable orangepi-resize-filesystem" 2>&1 > /dev/null
+
+if [[ $USE_OVERLAYFS -eq 1 ]]; then
+	display_alert "Enabling" "setup-overlay"
+	chroot ${TempDir}/rootfs/ /bin/bash -c "systemctl --quiet enable setup-overlay" 2>&1 > /dev/null
+fi
+
+rm -f "${TempDir}"/rootfs/etc/fstab
+# Restore TMP and swap
+echo "# <file system>					<mount point>	<type>	<options>							<dump>	<pass>" > "${TempDir}"/rootfs/etc/fstab
+echo "tmpfs						/tmp		tmpfs	defaults,nosuid							0	0" >> "${TempDir}"/rootfs/etc/fstab
+grep swap /etc/fstab >> "${TempDir}"/rootfs/etc/fstab
+
+cp -R /boot "${TempDir}"/bootfs
+targetuuid=$(blkid -o export $rootdevice | grep -w UUID)
+
+sed -e 's,rootdev=.*,rootdev='"$targetuuid"',g' -i "${TempDir}"/bootfs//boot/orangepiEnv.txt
+grep -q '^rootdev' "${TempDir}"/bootfs/boot/orangepiEnv.txt || echo "rootdev=$targetuuid" >> "${TempDir}"/bootfs/boot/orangepiEnv.txt
+echo "$targetuuid       /               $ROOTFS_TYPE     ${mountopts[$ROOTFS_TYPE]}" >> "${TempDir}"/rootfs/etc/fstab
+
+
+if [[ $(type -t write_uboot_platform) != function ]]; then
+	display_alert "no u-boot package found" "write bootloader"
+	exit
+fi
+
+display_alert "Writing U-boot bootloader" "$LOOP" "info"
+write_uboot_platform "$DIR" $LOOP
+
+display_alert "Backup completed" "${image}" "info"

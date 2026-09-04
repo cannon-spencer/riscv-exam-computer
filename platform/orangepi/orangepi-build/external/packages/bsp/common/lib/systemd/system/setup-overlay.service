@@ -1,0 +1,11 @@
+[Unit]
+Description=Setup overlayfs automatically once
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/setup_overlay.sh
+
+[Install]
+WantedBy=multi-user.target
+

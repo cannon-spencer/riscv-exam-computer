@@ -1,0 +1,6 @@
+#define __vdso_clock_getres_offset	0x0a06
+#define __vdso_clock_gettime_offset	0x080a
+#define __vdso_flush_icache_offset	0x0a6c
+#define __vdso_getcpu_offset	0x0a60
+#define __vdso_gettimeofday_offset	0x0920
+#define __vdso_rt_sigreturn_offset	0x0800

@@ -1,0 +1,64 @@
+Displaying message: Extension manager processed 1 Extension Methods calls and 1 Extension Method implementations info
+
+## BUILD SCRIPT ENVIRONMENT
+
+Repository: 
+Version: 
+
+Host OS: 
+Host arch: 
+Host system: Linux nickpc-g16 6.19.11-1-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 02 Apr 2026 16:36:59 +0000 x86_64 GNU/Linux
+Virtualization type: none
+
+## Build script directories
+Build directory is located on:
+TARGET SOURCE                 FSTYPE  AVAIL
+/home  /dev/nvme0n1p4[/@home] btrfs  354.7G
+
+Build directory permissions:
+# file: /home/nickd/reptilian-riscv/orangepi/orangepi-build
+# owner: nickd
+# group: nickd
+user::rwx
+group::r-x
+other::r-x
+
+Temp directory permissions:
+# file: /home/nickd/reptilian-riscv/orangepi/orangepi-build/.tmp
+# owner: root
+# group: root
+user::rwx
+group::rwx
+other::r-x
+
+## BUILD CONFIGURATION
+
+Build target:
+Board: orangepirv
+Branch: current
+Minimal: no
+Desktop: no
+Desktop Environment: 
+Software groups: 
+
+Kernel configuration:
+Repository: https://github.com/orangepi-xunlong/linux-orangepi.git
+Branch: branch:orange-pi-5.15-jh7110
+Config file: linux-starfive2-current
+
+U-boot configuration:
+Repository: https://github.com/orangepi-xunlong/u-boot-orangepi.git
+Branch: branch:v2021.10-jh7110
+Config file: starfive_visionfive2_defconfig
+
+Partitioning configuration: gpt offset: 4
+Boot partition type: fat 
+Root partition type: ext4 
+
+CPU configuration:  -  with 
+Displaying message: Preparing host info
+Displaying message: Please read documentation to set up proper compilation environment
+Displaying message: https://www.armbian.com/using-armbian-tools/
+Displaying message: ERROR in function prepare_host build.sh:305 -> scripts/main.sh:692 -> scripts/main.sh:442 -> scripts/general.sh:1458 -> scripts/general.sh:0 err
+Displaying message: Running this tool on non x86_64 build host is not supported  err
+Displaying message: Process terminated  info

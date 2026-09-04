@@ -1,0 +1,278 @@
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/debootstrap/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//debootstrap/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//debootstrap/config_cli_standard/packages
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/debootstrap/config_cli_standard/components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//debootstrap/./components
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//debootstrap/config_cli_standard/components
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/config_cli_standard/packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/./packages
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/config_cli_standard/packages
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/config_cli_standard/packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/./packages.additional
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/config_cli_standard/packages.additional
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/config_cli_standard/packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/config_cli_standard/packages.remove
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop/_all_distributions/environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop/_all_distributions/environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop/_all_distributions/environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop//environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop//environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop//environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop/_all_distributions/environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop/_all_distributions/environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop/_all_distributions/environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop//environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop//environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop//environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop/_all_distributions/environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop/_all_distributions/environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop/_all_distributions/environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop//environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop//environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop//environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop/_all_distributions/environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop/_all_distributions/environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop/_all_distributions/environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop//environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop//environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop//environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop/_all_distributions/environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop/_all_distributions/environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop/_all_distributions/environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop//environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop//environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop//environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop/_all_distributions/environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop/_all_distributions/environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop/_all_distributions/environments///./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop//environments/_all_environments/./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop//environments//./packages.remove
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop//environments///./packages.remove
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+                                                                                                                           
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli/_all_distributions/main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/cli//main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli/_all_distributions/main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/cli//main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli/_all_distributions/main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/cli//main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli/_all_distributions/main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/cli//main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli/_all_distributions/main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/cli//main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli/_all_distributions/main/config_cli_standard/packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/cli//main/config_cli_standard/packages.uninstall
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop/_all_distributions/environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop/_all_distributions/environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop/_all_distributions/environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop//environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop//environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/desktop//environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop/_all_distributions/environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop/_all_distributions/environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop/_all_distributions/environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop//environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop//environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/_any_board/_config/desktop//environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop/_all_distributions/environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop/_all_distributions/environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop/_all_distributions/environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop//environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop//environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/architectures/riscv64/_config/desktop//environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop/_all_distributions/environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop/_all_distributions/environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop/_all_distributions/environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop//environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop//environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/families/starfive2/_config/desktop//environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop/_all_distributions/environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop/_all_distributions/environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop/_all_distributions/environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop//environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop//environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/external/config/optional/boards/orangepirv/_config/desktop//environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop/_all_distributions/environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop/_all_distributions/environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop/_all_distributions/environments///./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop//environments/_all_environments/./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop//environments//./packages.uninstall
+/home/nickd/reptilian-riscv/orangepi/orangepi-build/userpatches/desktop//environments///./packages.uninstall
+
+Potential paths :
+Show variables in function: aggregate_content [configuration.sh:385]
+
+
+potential_paths =:
+                                                                                                                           
+

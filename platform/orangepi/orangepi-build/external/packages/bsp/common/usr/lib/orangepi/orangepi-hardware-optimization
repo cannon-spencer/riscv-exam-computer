@@ -1,0 +1,685 @@
+#!/bin/bash
+#
+# Copyright (c) Authors: https://www.armbian.com/authors
+#
+# This file is licensed under the terms of the GNU General Public
+# License version 2. This program is licensed "as is" without any
+# warranty of any kind, whether express or implied.
+
+# Functions:
+#
+# set_io_scheduler
+# prepare_board
+# add_usb_storage_quirks
+
+
+# Read in basic OS image information
+. /etc/orangepi-release
+
+# and script configuration
+. /usr/lib/orangepi/orangepi-common
+
+# set audio
+#. /usr/lib/orangepi/orangepi-audio-config
+
+set_io_scheduler() {
+
+	# Convert kernel version to integer
+	KERNELID=$(uname -r |  awk -F'.' '{print ($1 * 100) + $2}')
+	for i in $( lsblk -idn -o NAME | grep -v zram ); do
+		read ROTATE </sys/block/$i/queue/rotational
+		case ${ROTATE} in
+			1) # mechanical drives
+				[[ $KERNELID -lt 420 ]] && sched=cfq || sched=bfq
+				;;
+			0) # flash based
+				[[ $KERNELID -lt 420 ]] && sched=noop || sched=none
+				;;
+			*)
+				continue
+				;;
+		esac
+		echo $sched >/sys/block/$i/queue/scheduler
+		echo -e "[\e[0;32m ok \x1B[0m] Setting $sched I/O scheduler for $i"
+	done
+
+} # set_io_scheduler
+
+
+
+
+prepare_board() {
+
+	CheckDevice=$(for i in /var/log /var / ; do findmnt -n -o SOURCE $i && break ; done)
+	# adjust logrotate configs
+	if [[ "${CheckDevice}" == *"/dev/zram"* || "${CheckDevice}" == "orangepi-ramlog" ]]; then
+		for ConfigFile in /etc/logrotate.d/* ; do sed -i -e "s/\/var\/log\//\/var\/log.hdd\//g" "${ConfigFile}"; done
+		sed -i "s/\/var\/log\//\/var\/log.hdd\//g" /etc/logrotate.conf
+	else
+		for ConfigFile in /etc/logrotate.d/* ; do sed -i -e "s/\/var\/log.hdd\//\/var\/log\//g" "${ConfigFile}"; done
+		sed -i "s/\/var\/log.hdd\//\/var\/log\//g" /etc/logrotate.conf
+	fi
+
+	# unlock cpuinfo_cur_freq to be accesible by a normal user
+	prefix="/sys/devices/system/cpu/cpufreq"
+	for f in $(ls -1 $prefix 2> /dev/null)
+	do
+		[[ -f $prefix/$f/cpuinfo_cur_freq ]] && chmod +r $prefix/$f/cpuinfo_cur_freq 2> /dev/null
+	done
+	# older kernels
+	prefix="/sys/devices/system/cpu/cpu0/cpufreq/"
+	[[ -f $prefix/cpuinfo_cur_freq ]] && chmod +r $prefix/cpuinfo_cur_freq 2> /dev/null
+
+	# enable compression where not exists
+	find /etc/logrotate.d/. -type f | xargs grep -H -c 'compress' | grep 0$ | cut -d':' -f1 | xargs -r -L1 sed -i '/{/ a compress'
+	sed -i "s/#compress/compress/" /etc/logrotate.conf
+
+	# tweak ondemand cpufreq governor settings to increase cpufreq with IO load
+	grep -q ondemand /etc/default/cpufrequtils
+	if [ $? -eq 0 ]; then
+		echo ondemand >/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+		cd /sys/devices/system/cpu
+		for i in cpufreq/ondemand cpu0/cpufreq/ondemand cpu4/cpufreq/ondemand ; do
+			if [ -d $i ]; then
+				echo 1 >${i}/io_is_busy
+				echo 25 >${i}/up_threshold
+				echo 10 >${i}/sampling_down_factor
+				echo 200000 >${i}/sampling_rate
+			fi
+		done
+	fi
+
+	chmod +x /etc/update-motd.d/*
+
+	# IRQ distribution based on $BOARDFAMILY and/or $BOARD_NAME
+	case ${BOARD} in
+
+		rockpro64|renegade-elite|pinebook-pro|station-p1)
+			BOARDFAMILY=rk3399
+			;;
+		orangepi5|orangepicm5|orangepicm5-tablet|orangepi5b|orangepi5plus|orangepiaimax|orangepi5pro|orangepi5max|orangepi5ultra|orangepitab|orangepi900)
+			[[ $BOARD =~ orangepi5|orangepi5b ]] && echo host > /sys/kernel/debug/usb/fc000000.usb/mode
+			if [[ $BOARD =~ orangepicm5 ]]; then
+				while true; do
+				        echo "set host!"
+				        echo host > /sys/kernel/debug/usb/fc000000.usb/mode
+				        sleep 0.5
+
+				        count=0
+				        for i in {1..3}; do
+				                sleep 0.5
+				                echo "check"
+				                if [[ "$(cat /sys/kernel/debug/usb/fc000000.usb/mode)" == "host" ]]; then
+				                        ((count++))
+				                else
+				                        break
+				                fi
+				                echo "check host $count"
+				        done
+
+				        [[ $count -eq 3 ]] && break
+				        echo "fail"
+				done
+			fi
+
+
+			if [[ ${BOARD}x == orangepicm5-tabletx ]]; then
+				tinymix -D 2 aw87xxx_profile_switch_0 Music
+				tinymix -D 2 aw87xxx_profile_switch_1 Music
+			fi
+
+			if [[ ${BOARD}x == orangepicm5x ]]; then
+
+				declare -A led_map=(
+					["wan"]="end|eth"
+					["lan1"]="enP4"
+					["lan2"]="enP3"
+				)
+
+				for led in "${!led_map[@]}"; do
+					interface=$(ls /sys/class/net/ | grep -E "${led_map[$led]}" | sed -n 1p)
+					echo netdev > "/sys/class/leds/$led/trigger"
+					echo "$interface" > "/sys/class/leds/$led/device_name"
+					echo 1 > "/sys/class/leds/$led/tx"
+					echo 1 > "/sys/class/leds/$led/rx"
+					echo 1 > "/sys/class/leds/$led/link"
+				done
+			fi
+
+			if [[ $BOARD =~ orangepi900 ]]; then
+				es8388_card=$(aplay -l | grep "es8388" | cut -d ':' -f 1 | cut -d ' ' -f 2)
+				jack_num=$(tinymix -D ${es8388_card} | grep "Headphone Jack" | cut -c1-2)
+
+				if [[ $(tinymix -D ${es8388_card} $jack_num | cut -d ":" -f 2) == *On ]]; then
+					tinymix -D ${es8388_card} 25 2
+					tinymix -D ${es8388_card} 27 2
+				else
+					tinymix -D ${es8388_card} 25 0
+					tinymix -D ${es8388_card} 27 0
+				fi
+			elif [[ $BOARD =~ orangepi5plus|orangepiaimax ]]; then
+				amixer -c ${es8388_card} cset name='PCM Volume' 190 >/dev/null 2>&1
+				amixer -c ${es8388_card} cset name='Right Mixer Right Playback Switch' off >/dev/null 2>&1
+			fi
+
+			if [[ -c /dev/mpp_service ]]; then
+				chmod 0666 /dev/mpp_service
+
+				if [[ $DISTRIBUTION_CODENAME =~ bullseye|bookworm|jammy ]]; then
+					{
+						echo "type=dec"
+						echo "codecs=VP8:VP9:H.264:H.265:AV1"
+						echo "max-width=7680"
+						echo "max-height=4320"
+					} > /dev/video-dec0
+				else
+					echo dec > /dev/video-dec0
+				fi
+
+				# Create dummy video node for chromium V4L2 VDA/VEA with rkmpp plugin
+				echo enc > /dev/video-enc0
+				chmod 0660 /dev/video-*
+				chown root:video /dev/video-*
+			fi
+
+			for p in $(modetest|grep "^Planes:" -A 9999|grep -o "^[0-9]*");
+			do
+				modetest -M rockchip -aw $p:ASYNC_COMMIT:1 &>/dev/null
+			done
+
+			bt_status=$(cat /proc/device-tree/wireless-bluetooth/status)
+			wifi_chip=$(cat /proc/device-tree/wireless-wlan/wifi_chip_type)
+			if [[ ${wifi_chip} == "ap6275p" && ${bt_status} == "okay" ]]; then
+				rfkill unblock all
+				brcm_patchram_plus --bd_addr_rand --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
+					--baudrate 1500000 --patchram /lib/firmware/ap6275p/BCM4362A2.hcd /dev/ttyS9 &
+			fi
+
+			es8388_card=$(aplay -l | grep "es8388" | cut -d ':' -f 1 | cut -d ' ' -f 2)
+			amixer -c ${es8388_card} cset name='OUT1 Switch' on >/dev/null 2>&1
+			amixer -c ${es8388_card} cset name='ALC Capture NG Switch' 1 >/dev/null 2>&1
+			amixer -c ${es8388_card} cset name='ALC Capture Function' 3 >/dev/null 2>&1
+
+			if [[ $BOARD =~ orangepi5pro|orangepicm5-tablet ]]; then
+
+				es8388_card=$(aplay -l | grep "es8388" | cut -d ':' -f 1 | cut -d ' ' -f 2)
+				tinymix -D ${es8388_card} 37 1
+
+				rfkill unblock all
+				brcm_patchram_plus --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
+				        --baudrate 1500000 --patchram /lib/firmware/BCM4345C0.hcd /dev/ttyS9 &
+
+			elif [[ $BOARD =~ orangepi5max|orangepi5ultra ]]; then
+
+				rfkill unblock all
+				sleep 2
+				brcm_patchram_plus --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
+				        --baudrate 1500000 --patchram /lib/firmware/SYN43711A0.hcd /dev/ttyS7 &
+			fi
+			;;
+		orangepi6plus)
+			if [ ! -e /dev/dma_heap/linux,cma ]; then
+				ln -s /dev/dma_heap/reserved /dev/dma_heap/linux,cma
+			fi
+			;;
+		orangepi3-lts)
+			#aplay /usr/share/sounds/alsa/audio.wav -D hw:0,0 > /dev/null 2>&1
+			rfkill unblock all
+			/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd &
+			;;
+		orangepi800)
+			[[ -f /sys/class/leds/caps_led/brightness ]] && chmod 666 /sys/class/leds/caps_led/brightness
+			[[ -f /sys/class/leds/num_led/brightness ]] && chmod 666 /sys/class/leds/num_led/brightness
+
+			if [[ -c /dev/mpp_service ]]; then
+				chmod 666 /dev/mpp_service
+
+				# Create dummy video node for chromium V4L2 VDA/VEA with rkmpp plugin
+				echo dec > /dev/video-dec0
+				echo enc > /dev/video-enc0
+				chmod 660 /dev/video-*
+				chown root.video /dev/video-*
+			fi
+
+			rfkill unblock all
+			/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd &
+			;;
+		orangepir1plus|orangepir1plus-lts)
+			echo netdev > /sys/class/leds/lan_led/trigger
+			echo lan0 > /sys/class/leds/lan_led/device_name
+			echo 1 > /sys/class/leds/lan_led/link
+
+			/usr/bin/pwm-fan.sh &
+			;;
+		orangepizero2|orangepizero2-lts|orangepizero2-b|orangepizero3|orangepizero3plus|orangepir1b|orangepizero2w)
+			kv=$(uname -r)
+
+			#if [[ $BRANCH == current ]]; then
+			#	# Initial hdmi audio
+			#	aplay /usr/share/sounds/alsa/mute.wav -D hw:0,0 > /dev/null 2>&1
+			#	aplay /usr/share/sounds/alsa/mute.wav -D hw:1,0 > /dev/null 2>&1
+			#	aplay /usr/share/sounds/alsa/mute.wav -D hw:0,0 > /dev/null 2>&1
+			#fi
+
+			if [[ $BOARD == orangepizero2w ]]; then
+
+				if [[ ${DISTRIBUTION_CODENAME} == "bookworm" || ${DISTRIBUTION_CODENAME} == "noble" ]]; then
+					interface_100m="end0"
+				else
+					interface_100m="eth0"
+				fi
+
+				echo netdev > /sys/class/leds/100m_act/trigger
+				echo "${interface_100m}" > /sys/class/leds/100m_act/device_name
+				echo 1 > /sys/class/leds/100m_act/tx
+				echo 1 > /sys/class/leds/100m_act/rx
+
+				echo netdev > /sys/class/leds/100m_link/trigger
+				echo ${interface_100m} > /sys/class/leds/100m_link/device_name
+				echo 1 > /sys/class/leds/100m_link/link
+			fi
+
+			if [[ $BOARD == orangepir1b ]]; then
+
+				#for 100m interface
+				interface_100m="eth1"
+				echo netdev > /sys/class/leds/100m_act/trigger
+				echo "${interface_100m}" > /sys/class/leds/100m_act/device_name
+				echo 1 > /sys/class/leds/100m_act/tx
+				echo 1 > /sys/class/leds/100m_act/rx
+
+				echo netdev > /sys/class/leds/100m_link/trigger
+				echo ${interface_100m} > /sys/class/leds/100m_link/device_name
+				echo 1 > /sys/class/leds/100m_link/link
+
+				echo netdev > /sys/class/leds/lan_led/trigger
+				echo ${interface_100m} > /sys/class/leds/lan_led/device_name
+				echo 1 > /sys/class/leds/lan_led/link
+				echo 1 > /sys/class/leds/lan_led/tx
+				echo 1 > /sys/class/leds/lan_led/rx
+
+				#for 1000m interface
+				interface_1000m="eth0"
+				echo netdev > /sys/class/leds/wan_led/trigger
+				echo ${interface_1000m} > /sys/class/leds/wan_led/device_name
+				echo 1 > /sys/class/leds/wan_led/link
+				echo 1 > /sys/class/leds/wan_led/tx
+				echo 1 > /sys/class/leds/wan_led/rx
+
+			fi
+
+			if [[ ${kv} == 4.9* ]]; then
+				aplay /usr/share/sounds/alsa/audio.wav -D hw:2,0 > /dev/null 2>&1
+			fi
+
+			if [[ $BOARD == orangepizero3plus ]]; then
+				(while [[ ! -e /proc/bluetooth/sleep/btwrite ]]; do sleep 1; done; echo 1 > /proc/bluetooth/sleep/btwrite; \
+					/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyAS1 aic) &
+			else
+				rfkill unblock all
+				/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd &
+			fi
+			;;
+		orangepi400)
+			rfkill unblock all
+			/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd &
+
+			[[ -f /sys/class/leds/caps_led/brightness ]] && chmod 666 /sys/class/leds/caps_led/brightness
+			[[ -f /sys/class/leds/num_led/brightness ]] && chmod 666 /sys/class/leds/num_led/brightness
+			;;
+		orangepi4)
+			if [[ -c /dev/mpp_service ]]; then
+				chmod 666 /dev/mpp_service
+
+			elif [[ -c /dev/vpu_service ]]; then
+				chmod 666 /dev/vpu_service
+			fi
+
+			# Create dummy video node for chromium V4L2 VDA/VEA with rkmpp plugin
+			echo dec > /dev/video-dec0
+			echo enc > /dev/video-enc0
+			chmod 660 /dev/video-*
+			chown root.video /dev/video-*
+
+			rfkill unblock all
+			/usr/bin/brcm_patchram_plus -d --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
+				--baudrate 1500000 --patchram /lib/firmware/brcm/BCM4345C5.hcd /dev/ttyS0 &
+			;;
+		orangepi4-lts)
+			# RK3399 - 1.8GHz
+			# RK3399-T - 1.6GHz
+			sed -i "s/MAX_SPEED=.*/MAX_SPEED=$(cpufreq-info -c 4 -l | awk '{ print $2 }')/" /etc/default/cpufrequtils
+
+			CODEC_CARD=0
+			amixer -c ${CODEC_CARD} cset name='Differential Mux' 1 >/dev/null 2>&1
+
+			if [[ -c /dev/mpp_service ]]; then
+				chmod 666 /dev/mpp_service
+
+			elif [[ -c /dev/vpu_service ]]; then
+				chmod 666 /dev/vpu_service
+			fi
+
+			# Create dummy video node for chromium V4L2 VDA/VEA with rkmpp plugin
+			echo dec > /dev/video-dec0
+			echo enc > /dev/video-enc0
+			chmod 660 /dev/video-*
+			chown root.video /dev/video-*
+
+			rfkill unblock all
+			/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd &
+			;;
+		orangepi4a)
+			echo usb_host > /sys/devices/platform/soc@3000000/10.usbc0/otg_role
+			echo 4 1 > /sys/devices/platform/soc@3000000/2020000.nsi-controller/nsi-pmu/hwmon0/port_abs_bwlen
+			echo 4 400 > /sys/devices/platform/soc@3000000/2020000.nsi-controller/nsi-pmu/hwmon0/port_abs_bwl
+			chmod 666 /dev/vipcore
+			tinymix -D 0 23 1
+			tinymix -D 0 26 1
+			rfkill unblock all
+			/usr/bin/brcm_patchram_plus --enable_hci --no2bytes --tosleep 200000 \
+				--baudrate 1500000 --patchram /lib/firmware/BCM4345C5.hcd /dev/ttyAS1 &
+			;;
+		orangepicm4|orangepi3b)
+			echo host > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode
+			if [[ -c /dev/mpp_service ]]; then
+				chmod 666 /dev/mpp_service
+
+				# Create dummy video node for chromium V4L2 VDA/VEA with rkmpp plugin
+				echo dec > /dev/video-dec0
+				echo enc > /dev/video-enc0
+				chmod 660 /dev/video-*
+				chown root.video /dev/video-*
+			fi
+
+			for p in $(modetest|grep "^Planes:" -A 9999|grep -o "^[0-9]*");
+			do
+				modetest -M rockchip -aw $p:ASYNC_COMMIT:1 &>/dev/null
+			done
+
+			amixer -c 0 cset name='Playback Path' HP > /dev/null 2>&1
+			amixer -c 0 cset name='Capture MIC Path' 'Main Mic' > /dev/null 2>&1
+
+			bt_status=$(cat /proc/device-tree/wireless-bluetooth/status)
+			wifi_chip=$(cat /proc/device-tree/wireless-wlan/wifi_chip_type)
+
+			if [[ "${wifi_chip}" == "ap6256" && "${bt_status}" == "okay" ]]; then
+				rfkill unblock all
+				brcm_patchram_plus --enable_hci --no2bytes --use_baudrate_for_download --tosleep 200000 \
+				        --baudrate 1500000 --patchram /lib/firmware/BCM4345C0.hcd /dev/ttyS1 &
+			else
+				rfkill unblock all
+				(while [ ! -e /dev/ttyBT0 ]; do sleep 1; done; hciattach_opi -n -s 1500000 /dev/ttyBT0 sprd) &
+
+			fi
+			;;
+		orangepi3plus)
+			gpio mode 28 in
+			gpio mode 28 up
+			gpio read 28
+			;;
+		orangepirv)
+			echo 30 > /sys/class/gpio/export
+			echo out > /sys/class/gpio/gpio30/direction
+			echo 0 > /sys/class/gpio/gpio30/value
+			sleep 1
+			echo 1 > /sys/class/gpio/gpio30/value
+			/usr/bin/brcm_patchram_plus -d --enable_hci --no2bytes --tosleep 200000 \
+				--baudrate 115200 --patchram /lib/firmware/BCM4345C5.hcd /dev/ttyS1 &
+			media-ctl --set-v4l2 '"imx219 6-0010":0[fmt:SRGGB10_1X10/1920x1080]'
+			/opt/media-ctl-pipeline.sh -d /dev/media0 -i csiphy0 -s ISP0 -a start
+			/opt/ISP/stf_isp_ctrl -m imx219mipi -j 0 -a 1 &
+			;;
+		orangepirv2)
+			rfkill unblock all
+			/usr/bin/brcm_patchram_plus --enable_hci --no2bytes --tosleep 200000 \
+				--baudrate 1500000 --patchram /lib/firmware/BCM4345C5.hcd /dev/ttyS2 &
+			;;
+		orangepir2s)
+			echo ff > /sys/class/net/enP2p1s0/queues/rx-0/rps_cpus
+			echo ff > /sys/class/net/enP1p1s0/queues/rx-0/rps_cpus
+
+			echo 4096 > /sys/class/net/enP2p1s0/queues/rx-0/rps_flow_cnt
+			echo 4096 > /sys/class/net/enP1p1s0/queues/rx-0/rps_flow_cnt
+
+			;;
+		aipcliteb)
+			echo usb_host > /sys/devices/platform/soc@3000000/10.usbc0/otg_role
+
+			(
+				echo 1 > /sys/bus/pci/rescan
+				if lspci | grep -q BCM43752; then
+					rfkill unblock all
+						sleep 5
+					brcm_patchram_plus --enable_hci \
+					--no2bytes --use_baudrate_for_download --tosleep 200000 --baudrate 1500000 \
+					--patchram /lib/firmware/ap6275p/BCM4362A2.hcd /dev/ttyAS1
+				fi
+			) &
+
+			;;
+		orangepi4pro)
+			echo 40 > /sys/class/gpio/export
+			echo out > /sys/class/gpio/gpio40/direction
+			echo 1 > /sys/class/gpio/gpio40/value
+			echo usb_host > /sys/devices/platform/soc@3000000/10.usbc0/otg_role
+			(while [[ ! -e /proc/bluetooth/sleep/btwrite ]]; do sleep 1; done; echo 1 > /proc/bluetooth/sleep/btwrite; \
+				/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyS1 aic) &
+			#/sbin/rmmod sunxi_stmmac && /sbin/modprobe sunxi_stmmac
+			amixer -c 1 cset name='ADCL PGA Volume' 10 >/dev/null 2>&1
+			amixer -c 1 cset name='ADCR PGA Volume' 10 >/dev/null 2>&1
+			;;
+		orangepizero3w)
+			echo usb_host > /sys/devices/platform/soc@3000000/10.usbc0/otg_role
+			(while [[ ! -e /proc/bluetooth/sleep/btwrite ]]; do sleep 1; done; echo 1 > /proc/bluetooth/sleep/btwrite; \
+				/usr/bin/hciattach_opi -n -s 1500000 /dev/ttyS1 aic) &
+			;;
+
+	esac
+
+	case ${BOARDFAMILY} in
+		rockchip) # RK3288: usb1 on cpu1, usb3 (EHCI) on cpu2, eth0 and GPU on cpu3
+			echo 2 >/proc/irq/$(awk -F":" "/usb1/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			echo 4 >/proc/irq/$(awk -F":" "/usb3/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			echo 8 >/proc/irq/$(awk -F":" "/eth0/ {print \$1}" </proc/interrupts | sed 's/\ //g' | head -n1)/smp_affinity
+			echo 7 >/sys/class/net/eth0/queues/rx-0/rps_cpus
+			for i in $(awk -F':' '/gpu/{print $1}' /proc/interrupts | sed 's/\ //g'); do
+				echo 8 >/proc/irq/$i/smp_affinity
+			done
+			;;
+		rockchip64) # Rock64 and Renegade: GPU on cpu1, USB3 on cpu2, Ethernet on cpu3
+			for i in $(awk -F':' '/Mali/{print $1}' </proc/interrupts | sed 's/\ //g'); do
+				echo 2 >/proc/irq/$i/smp_affinity
+			done
+			for i in $(awk -F":" "/ehci/ {print \$1}" </proc/interrupts | sed 's/\ //g'); do
+				echo 2 >/proc/irq/$i/smp_affinity
+			done
+			for i in $(awk -F":" "/ohci/ {print \$1}" </proc/interrupts | sed 's/\ //g'); do
+				echo 2 >/proc/irq/$i/smp_affinity
+			done
+			for i in $(awk -F":" "/xhci/ {print \$1}" </proc/interrupts | sed 's/\ //g'); do
+				echo 4 >/proc/irq/$i/smp_affinity
+			done
+
+			# Wait (up to 5s) until eth0 brought up
+			for i in {1..5}; do
+				grep -q "eth0" /proc/interrupts && break
+				sleep 1
+			done
+
+			echo 8 >/proc/irq/$(awk -F":" "/eth0/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			echo 7 >/sys/class/net/eth0/queues/rx-0/rps_cpus
+			echo 32768 >/proc/sys/net/core/rps_sock_flow_entries
+			echo 32768 >/sys/class/net/eth0/queues/rx-0/rps_flow_cnt
+			;;
+		rk3399)
+			for i in $(awk -F':' '/gpu/{print $1}' </proc/interrupts | sed 's/\ //g'); do
+				echo 2 >/proc/irq/$i/smp_affinity
+			done
+			for i in $(awk -F':' '/dw-mci/{print $1}' </proc/interrupts | sed 's/\ //g'); do
+				echo 2 >/proc/irq/$i/smp_affinity
+			done
+			for i in $(awk -F":" "/ehci/ {print \$1}" </proc/interrupts | sed 's/\ //g'); do
+				echo 2 >/proc/irq/$i/smp_affinity
+			done
+			for i in $(awk -F":" "/ohci/ {print \$1}" </proc/interrupts | sed 's/\ //g'); do
+				echo 2 >/proc/irq/$i/smp_affinity
+			done
+			for i in $(awk -F":" "/xhci/ {print \$1}" </proc/interrupts | sed 's/\ //g'); do
+				echo 4 >/proc/irq/$i/smp_affinity
+			done
+
+			# Wait (up to 5s) until eth0 brought up
+			for i in {1..5}; do
+				grep -q "eth0" /proc/interrupts && break
+				sleep 1
+			done
+
+			echo 8 >/proc/irq/$(awk -F":" "/eth0/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			echo 7 >/sys/class/net/eth0/queues/rx-0/rps_cpus
+			echo 32768 >/proc/sys/net/core/rps_sock_flow_entries
+			echo 32768 >/sys/class/net/eth0/queues/rx-0/rps_flow_cnt
+			for i in $(awk -F':' 'tolower($0) ~ /pcie/{print $1}' </proc/interrupts | sed 's/\ //g'); do
+				echo 16 >/proc/irq/$i/smp_affinity
+			done
+			# set dmc memory governor to performance with default kernel
+			if [ -f /sys/bus/platform/drivers/rockchip-dmc/dmc/devfreq/dmc/governor ]; then
+				echo performance > /sys/bus/platform/drivers/rockchip-dmc/dmc/devfreq/dmc/governor
+			fi
+			;;
+		sun4i|sun5i|rda8810) # only one core, nothing to improve
+			:
+			;;
+		sun8i*) # H3/R40/V40 boards, try to do the best based on specific board since interfaces vary a lot
+			# 10 or 120 sec user feedback that the board is ready after 1st login with 3.4 kernel
+			SwapState="$(grep swap /etc/fstab)"
+			if [ "X${SwapState}" != "X" ]; then
+				(echo heartbeat >/sys/class/leds/*green*/trigger) 2>/dev/null
+				[ -f "/root/.not_logged_in_yet" ] && BlinkTime=120 || BlinkTime=10
+				(sleep ${BlinkTime} && (echo default-on >/sys/class/leds/*green*/trigger) 2>/dev/null) &
+			fi
+
+			# check kernel version for IRQ/module names
+			case ${KERNELID} in
+				3*)
+					# BSP kernel
+					GbE="gmac0"; WiFi="wlan0"; USB1="usb2"; USB2="usb3"; USB3="usb4"
+					;;
+				*)
+					# Mainline kernel
+					GbE="eth0"; WiFi="wlan0"; USB1="usb3"; USB2="usb4"; USB3="usb5"
+					;;
+			esac
+			# Assign 1st and 2nd USB port to cpu1 and cpu2 on every sun8i board
+			echo 2 >/proc/irq/$(awk -F":" "/${USB1}/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			echo 4 >/proc/irq/$(awk -F":" "/${USB2}/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			case ${BOARD_NAME} in
+				"Orange Pi+"|"Orange Pi+ 2"|"Orange Pi+ 2E"|"Banana Pi M2*"|"NanoPi M1 Plus")
+					# Send GBit Ethernet IRQs to cpu3
+					echo 8 >/proc/irq/$(awk -F":" "/${GbE}/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+					echo 7 >/sys/class/net/eth0/queues/rx-0/rps_cpus
+					;;
+				"NanoPi M1"|"Orange Pi PC Plus"|"Orange Pi PC +"|"Orange Pi PC"|"NanoPi Neo"|"Orange Pi Zero")
+					# Send 3rd USB port's IRQs to cpu3
+					echo 8 >/proc/irq/$(awk -F":" "/${USB3}/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+					;;
+				"Orange Pi Lite"|"NanoPi Air"|"Lime A33"|"Orange Pi Zero Plus 2"*)
+					# Send SDIO/mmc IRQs to cpu3
+					for i in $(awk -F':' '/sunxi-mmc/{print $1}' </proc/interrupts | sed 's/\ //g'); do
+						echo 8 >/proc/irq/$i/smp_affinity
+					done
+					;;
+				"Beelink X2"|"Orange Pi R1")
+					# Wifi module reload workaround / fix
+					[[ -n $(lsmod | grep 8189es) ]] && rmmod 8189es && modprobe 8189es
+					# Send SDIO to cpu1, USB to cpu2, Ethernet to cpu3
+					for i in $(awk -F':' '/sunxi-mmc/{print $1}' </proc/interrupts | sed 's/\ //g'); do
+						echo 2 >/proc/irq/$i/smp_affinity
+					done
+					for i in $(awk -F':' '/hcd:usb/{print $1}' </proc/interrupts | sed 's/\ //g'); do
+						echo 4 >/proc/irq/$i/smp_affinity
+					done
+					echo 8 >/proc/irq/$(awk -F":" "/${GbE}/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+					;;
+			esac
+			;;
+		sun50i*|sunxi64*) # A64/H5 based boards like Pine64, OPi PC 2, NanoPi NEO 2
+			# Send IRQs for the lower real USB port (usb2) to cpu2 and for the upper (OTG/usb1) to cpu1
+			echo 2 >/proc/irq/$(awk -F":" "/usb1/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			echo 4 >/proc/irq/$(awk -F":" "/usb2/ {print \$1}" </proc/interrupts | sed 's/\ //g')/smp_affinity
+			echo 8 >/proc/irq/$(awk -F":" "/sunxi-mmc/ {print \$1}" </proc/interrupts | sed 's/\ //g' | head -n1)/smp_affinity
+			echo 8 >/proc/irq/$(awk -F":" "/eth/ {print \$1}" </proc/interrupts | sed 's/\ //g' | head -n1)/smp_affinity
+			echo 7 >/sys/class/net/eth0/queues/rx-0/rps_cpus
+			# OrangePi win GMAC is very unstable on gigabit. Limit it down to 100Mb solve problems
+			[[ $BOARD == orangepiwin && $BRANCH == legacy ]] && ethtool -s eth0 speed 100 duplex full
+			;;
+	esac
+} # prepare_board
+
+add_usb_storage_quirks() {
+
+	# check for /boot/orangepiEnv.txt existence
+	[ -f /boot/orangepiEnv.txt ] || return
+
+	# cleanup. add LF. This prevents adding parameters to the same line
+	echo "" >> /boot/orangepiEnv.txt;  sed -i '/^$/d;$G' /boot/orangepiEnv.txt; sed -i '/^$/d;$G' /boot/orangepiEnv.txt
+
+	# cleanup. remove empty lines in the middle
+	sed -i '/^$/d' /boot/orangepiEnv.txt
+
+	# preserve old contents if existent
+	TMPFILE=$(mktemp /tmp/${0##*/}.XXXXXX)
+	trap "sleep 1 ; rm \"${TMPFILE}\" ; exit 0" 0 1 2 3 15
+	awk -F"=" '/^usbstoragequirks/ {print $2}' </boot/orangepiEnv.txt | tr -d -c '[:graph:]' >${TMPFILE}
+
+	# UAS blacklist Norelsys NS1068X and NS1066X since broken. Can be removed once
+	# they're blacklisted upstream
+	[ -s ${TMPFILE} ] || echo "0x2537:0x1066:u,0x2537:0x1068:u" >${TMPFILE}
+
+	# check for connected Seagate or WD HDD enclosures and blacklist them all
+	lsusb | awk -F" " '{print "0x"$6}' | sed 's/:/:0x/' | sort | uniq | while read ; do
+		case ${REPLY} in
+			"0x0bc2:"*|"0x1058:"*)
+				grep -q "${REPLY}" ${TMPFILE} || sed -i "1 s/\$/,${REPLY}:u/" ${TMPFILE}
+				;;
+		esac
+	done
+
+	read USBQUIRKS <${TMPFILE}
+	sed -i '/^usbstoragequirks/d' /boot/orangepiEnv.txt
+	echo "usbstoragequirks=${USBQUIRKS}" >>/boot/orangepiEnv.txt
+	sync &
+	if [ -f /sys/module/usb_storage/parameters/quirks ]; then
+		echo ${USBQUIRKS} >/sys/module/usb_storage/parameters/quirks
+	fi
+
+} # add_usb_storage_quirks
+
+
+branch_naming_workaround()
+# https://armbian.atlassian.net/browse/AR-748
+# Once we rework kernel packages, this can be done better
+{
+
+	if [[ -z $(cat /etc/orangepi-release | grep BRANCH) ]]; then
+		BRANCH=$(dpkg -l | egrep "linux-image" | egrep "current|legacy|edge" | awk '{print $2}' | cut -d"-" -f3 | head -1)
+		[[ -n ${BRANCH} ]] && echo "BRANCH=$BRANCH" >> /etc/orangepi-release
+	fi
+}
+
+
+case $1 in
+	*start*)
+		# set optimal disk scheduler settings
+		set_io_scheduler &
+
+		# hardware preparation
+		prepare_board &
+
+		# add usb quirks
+		# add_usb_storage_quirks &
+
+		# branch naming workaround
+		branch_naming_workaround &
+		;;
+esac
