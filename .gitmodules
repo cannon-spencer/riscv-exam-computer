@@ -1,5 +1,5 @@
 [submodule "platform/reptilian-riscv"]
-	path = platform/reptilian-riscv
+	path = platform/archive/reptilian-riscv
 	url = https://github.com/desanctis-n/reptilian-riscv.git
 [submodule "platform/seb-linux"]
 	path = platform/seb-linux
