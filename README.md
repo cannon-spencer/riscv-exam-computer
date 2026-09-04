@@ -6,7 +6,7 @@ This repo is the **project “core”**: the exam/kiosk environment, policies, a
 
 ## Repo layout
 
-- `platform/reptilian-riscv/`: board bring-up + boot chain + kernel/userspace sources
+- `platform/orangepi/`: board bring-up + boot chain + kernel/userspace sources
 - `platform/seb-linux/`: Linux Safe Exam Browser (submodule; exam process only)
 - `exam-env/`: `seb-agent/` on the board, hosted `server/` API, admin `frontend/`
 - `scripts/`: host-side `flash-os.sh` then `install-software.sh`
