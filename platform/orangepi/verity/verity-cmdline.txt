@@ -1,1 +1,0 @@
-console=tty0 console=ttyS0,115200 earlycon rootwait ro root=/dev/mapper/verityroot

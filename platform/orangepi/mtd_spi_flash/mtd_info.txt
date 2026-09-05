@@ -1,4 +1,0 @@
-dev:    size   erasesize  name
-mtd0: 00040000 00001000 "spl"
-mtd1: 00300000 00001000 "uboot"
-mtd2: 00100000 00001000 "data"

@@ -1,9 +1,0 @@
-ACTION=="remove", GOTO="permissions_end"
-
-# VPU devices
-KERNEL=="vdec", MODE="0660", GROUP="video"
-KERNEL=="venc", MODE="0660", GROUP="video"
-KERNEL=="jpu", MODE="0660", GROUP="video"
-
-LABEL="permissions_end"
-
