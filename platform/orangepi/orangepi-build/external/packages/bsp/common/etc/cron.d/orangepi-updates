@@ -1,2 +1,0 @@
-@reboot root /usr/lib/orangepi/orangepi-apt-updates
-@daily root /usr/lib/orangepi/orangepi-apt-updates
