@@ -1,54 +1,48 @@
 # riscv-exam-computer
 
-A plug-and-play secure exam computer built around a RISC-V SBC. The device boots into a locked-down Linux environment and launches a Safe Exam Browser (SEB)-compatible kiosk so students can take exams via Canvas without invasive proctoring.
+A plug-and-play secure exam computer on a RISC-V SBC. It boots a locked-down Linux environment and a Safe Exam Browser kiosk for Canvas exams.
 
-This repo is the **project “core”**: the exam/kiosk environment, policies, and glue needed to turn a RISC-V board into a deployable exam device.
+This repo is the exam/kiosk glue. Board OS images are built in [cannon-spencer/reptilian-riscv](https://github.com/cannon-spencer/reptilian-riscv).
 
-## Repo layout
+## Flash a new Orange Pi RV
 
-- `platform/orangepi/`: board bring-up + boot chain + kernel/userspace sources
-- `platform/seb-linux/`: Linux Safe Exam Browser (submodule; exam process only)
-- `exam-env/`: `seb-agent/` on the board, hosted `server/` API, admin `frontend/`
-- `scripts/`: host-side `flash-os.sh` then `install-software.sh`
-- `docs/`: course LaTeX in `docs/latex/`
+1. Plug in an SD card. On macOS: `diskutil list` — use `/dev/rdiskN`, never `disk0`.
+2. Flash (downloads the CI image if you do not have one cached):
 
-## Architecture (pre-alpha)
-
-```mermaid
-%%{init: {'themeVariables': {'fontSize': '17px', 'fontFamily': 'system-ui, sans-serif'}}}%%
-flowchart LR
-  UI["Kiosk / browser"]
-  WM["Compositor / session"]
-  OS["Linux + boot stack"]
-  NET["HTTPS / Canvas / IdP"]
-  UI <--> WM
-  WM <--> OS
-  OS <--> NET
+```bash
+./scripts/flash-os.sh --device /dev/rdisk4
 ```
 
-**What each box is**
+3. Put the card in the board and power on. First boot resizes the rootfs, then logs in as `orangepi`.
 
-- **Kiosk / browser** — full-screen exam UI (SEB-class client or Linux wrapper target).
-- **Compositor / session** — Wayland kiosk, single-app focus, process policy.
-- **Linux + boot stack** — distro image, kernel, bootloader; platform sources live under `platform/reptilian-riscv/`.
-- **HTTPS / Canvas / IdP** — outbound TLS to LMS and campus identity (e.g. Gatorlink, Duo).
+A new board already has SPI firmware. You do not flash U-Boot for a first boot.
 
-Exam and SEB configuration are intended on verified or read-only storage. Secure boot and stronger isolation (e.g. PMP) are design targets, not fully implemented in this milestone.
+## How the OS is built
 
-## Known bugs / limitations
+`reptilian-riscv` holds the Orange Pi kernel, U-Boot, and image builder. That repo rarely changes.
 
-- End-to-end exam flow (Canvas + kiosk lockdown) is not yet validated on target hardware.
-- Secure boot, partition layout, and hardware-backed key storage are not complete relative to the design draft.
-- Add concrete, reproducible issues here as they are found; the pre-alpha report should stay in sync.
+On push to `main`, its CI runs `scripts/ci-build.sh` on Ubuntu 22.04 and writes `build/`:
+
+- `build/visionfive2_fw_payload.img` — committed (small)
+- `build/os.img.xz` — GitHub Release `orangepi-rv` (too large for git)
+
+This repo’s flash script downloads:
+
+```
+https://github.com/cannon-spencer/reptilian-riscv/releases/download/orangepi-rv/os.img.xz
+```
+
+## Layout
+
+- `platform/reptilian-riscv/` — board sources (submodule)
+- `platform/seb-linux/` — Safe Exam Browser (submodule)
+- `exam-env/` — board agent, server API, admin UI
+- `scripts/flash-os.sh` — write the SD image
+- `scripts/install-software.sh` — SEB/agent (not implemented)
+- `docs/` — course LaTeX
 
 ## Clone
 
-This repo uses a git submodule for the platform/kernel stack. Clone with submodules:
-
 ```bash
 git clone --recurse-submodules https://github.com/cannon-spencer/riscv-exam-computer.git
-```
-OR
-```bash
-git submodule update --init --recursive
 ```

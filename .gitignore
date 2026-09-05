@@ -1,6 +1,9 @@
 # Local LaTeX output (CI commits published PDFs to docs/pdfs/)
 docs/build/
 
+# Downloaded / unpacked CI OS image
+cache/
+
 # Rust
 exam-env/seb-agent/target/
 
