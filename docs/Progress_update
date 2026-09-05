@@ -1,0 +1,94 @@
+# ATTEMPT to get debian on orange pi rv (successful)
+## and to get seb on (half successful)
+## 9/4/2026
+
+I will preface this by saying my last attempt to get debian running was a fail and so my goal is to try to run it with no sd card (Justin recommneded), and check the uart, then flash debian image onto an sd card and go from there
+
+initial power on, no sd card in the board yet, console showed a VisionFive 2 boot screen instead of anything orange pi branded
+
+I think this is because Nick had swapped the board's SPI flash bootloader for VisionFive 2 firmware a while back, since the Orange Pi RV and VisionFive 2 use the same JH7110 chip, so the firmware still boots but thinks its a different board
+
+tried flashing an sd card with the official Orange Pi RV Debian image (foreshadowing, this was the problem)
+
+issue, the VisionFive 2 bootloader expects the root filesystem on partition 5 of mmc 1, but the Orange Pi RV Debian image only has 2 partitions (bootfs and rootfs), so the normal boot flow couldn't find anything to boot
+
+attempted solution, went into the u-boot prompt manually and ran:
+```
+mmc dev 1
+load mmc 1:1 0x40200000 extlinux/extlinux.conf
+sysboot mmc 1:1 any 0x40200000
+```
+this tells it to load and parse the extlinux config off the sd card directly instead of relying on the bootloader's normal partition 5 assumption
+
+Got further, kernel loaded and started booting, but then hit a new issue
+
+
+Issue: boot dropped into an initramfs emergency shell with an error: `UUID=ca4aa187-e966-4b49-8b41-d96af1ef068a does not exist`, meaning the extlinux config was pointing at a root filesystem UUID that didn't match anything on the actual card
+
+Running `blkid` inside the initramfs shell to check what UUID actually existed on the card, planning to just correct it
+
+That did not work, `blkid` only returned info for the raw disk `/dev/mmcblk1` (just a PTUUID, the partition table id) and nothing for any actual partitions. checked with `ls /dev/mmcblk1*` and `cat /proc/partitions` looks to be same result, no `mmcblk1p1` or `mmcblk1p2` device nodes exists (that I can see)
+
+Concliding this is not a uuid problem anymore, will be checking forums to see if anyone has had a similar issue 
+
+Asking claude...
+
+Claude suggests forcing kernel to rescan for parition tables
+
+That did not work, I am going to try to just put a fresh debian image on the sd card now. 
+
+I suspect that it was that the sd card itself only had a valid partition table header but no actual partition entries, pointing to a bad/incomplete flash rather than anything wrong with the board (the board could read the disk fine otherwise)
+
+attempted solution, reflashed the sd card from scratch. downloaded a fresh copy of the Orange Pi RV Debian image (didn't want to reuse the possibly corrupted old download) and flashed with balenaEtcher
+
+this worked, booted back into u-boot, ran the same three commands as before, and this time it went all the way through. filesystem resize ran automatically on first boot (normal, just expanding the rootfs to fill the card), then landed on a login screen, auto logged in as orangepi
+
+# Getting seb-linux running (attempted, failed)
+
+1. checked networking, ethernet showed no carrier (cable or switch issue, never dug into it), wifi was up but not connected to anything
+
+2. connected wifi with `sudo nmtui`
+
+got an ip
+
+3. sshed into the board
+
+4. cloned the seb-linux repo, `git clone https://github.com/Jvr2022/seb-linux.git` onto board
+
+Readme, `scripts/build.sh`, `scripts/dependencies.sh`, and `seb-linux-qt.pro` 
+
+found out it builds with qmake6 and make (not cmake). the `.pro` file has logic that checks if qt webengine is available, and falls back to webkitgtk automatically through pkg-config if not,
+
+so no special flags needed on riscv64, it should just pick webkitgtk on its own since qtwebengine isnt buildable there
+
+Problem: `scripts/dependencies.sh` tries to install `qt6-webengine-dev`, which doesnt exist for riscv64.
+confirmed with `apt-cache policy qt6-webengine-dev`, no candidate. same deal with `libqt6pdf6`
+
+attempted solution, edited the script to remove those two lines
+
+issue, the edit left blank lines where the deleted lines used to be, which broke the backslash line continuation in the middle of the `apt-get install -y \ ... \` list. bash ended up treating `libwebkit2gtk-4.1-dev` and `libqt6qmlworkerscript6` as separate commands instead of package names, threw "command not found" for both, and silently skipped installing everything after those points in the list
+
+ran the build and realized the webkitgtk dev packages were never installed
+
+Attempted solution, fixed the script properly and also ran a direct install for what was missing:
+```
+sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libtiff-dev libxcb-cursor0 libngtcp2-dev libngtcp2-crypto-gnutls-dev libqt6qmlworkerscript6
+```
+
+issue, `libjpeg62-turbo` (already installed as a dependency of something else) conflicts with `libjpeg62`
+
+Dropped `libjpeg62` from the install command and that was fine
+
+ran the build, `./scripts/build.sh`, which runs `qmake6 ../seb-linux-qt.pro` then `make`. 
+confirmed in the output it picked webkitgtk automatically, `Building with WebKitGTK fallback (Qt WebEngine unavailable; auto-detected)`
+GOOD NEWS
+
+Finished with no errors, only warnings (WHICH I IGNORE) output at `build/bin/safe-exam-browser`
+
+Checked with `file`, confirmed its a real riscv64 elf binary, dynamically linked
+
+I dont have my monitor rn so I tryed running it over ssh, `./safe-exam-browser --help`, failed with `qt.qpa.xcb: could not connect to display`
+Didnt expect it to work... and it did not work
+
+Next step is plugging an actual monitor and keyboard into the board directly and running it from there
+
