@@ -21,10 +21,10 @@ A new board already has SPI firmware. You do not flash U-Boot for a first boot.
 
 `reptilian-riscv` holds the Orange Pi kernel, U-Boot, and image builder. That repo rarely changes.
 
-On push to `main`, its CI runs `scripts/ci-build.sh` on Ubuntu 22.04 and writes `build/`:
+On push to `main`, its CI runs `scripts/ci-build.sh` on Ubuntu 22.04 and publishes both files on the `orangepi-rv` GitHub Release:
 
-- `build/visionfive2_fw_payload.img` — committed (small)
-- `build/os.img.xz` — GitHub Release `orangepi-rv` (too large for git)
+- `visionfive2_fw_payload.img`
+- `os.img.xz`
 
 This repo’s flash script downloads:
 
