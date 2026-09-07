@@ -91,4 +91,3 @@ I dont have my monitor rn so I tryed running it over ssh, `./safe-exam-browser -
 Didnt expect it to work... and it did not work
 
 Next step is plugging an actual monitor and keyboard into the board directly and running it from there
-
