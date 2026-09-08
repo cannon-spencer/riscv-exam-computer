@@ -4,18 +4,20 @@ A plug-and-play secure exam computer on a RISC-V SBC. It boots a locked-down Lin
 
 This repo is the exam/kiosk glue. Board OS images are built in [cannon-spencer/reptilian-riscv](https://github.com/cannon-spencer/reptilian-riscv).
 
-## Flash a new Orange Pi RV
+## Usage
 
-1. Plug in an SD card. On macOS: `diskutil list` — use `/dev/rdiskN`, never `disk0`.
-2. Flash (downloads the CI image if you do not have one cached):
+SD card in this machine (`diskutil list`; never `disk0`):
 
 ```bash
-./scripts/flash-os.sh --device /dev/rdisk4
+./scripts/flash-os.sh --device /dev/rdiskN
 ```
 
-3. Put the card in the board and power on. First boot resizes the rootfs, then logs in as `orangepi`.
+Board booted and on Wi‑Fi:
 
-A new board already has SPI firmware. You do not flash U-Boot for a first boot.
+```bash
+./scripts/install-software.sh --host orangepi@10.0.0.xx \
+  --control-url http://10.0.0.yy:8000
+```
 
 ## How the OS is built
 
@@ -38,7 +40,7 @@ https://github.com/cannon-spencer/reptilian-riscv/releases/download/orangepi-rv/
 - `platform/seb-linux/` — Safe Exam Browser (submodule)
 - `exam-env/` — board agent, server API, admin UI
 - `scripts/flash-os.sh` — write the SD image
-- `scripts/install-software.sh` — SEB/agent (not implemented)
+- `scripts/install-software.sh` — cross-compile `seb-agent` and scp to a booted board
 - `docs/` — course LaTeX
 
 ## Clone
