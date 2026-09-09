@@ -1,0 +1,155 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\newcommand{\todo}{\textit{TODO}}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{M3: Alpha Build}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{EEL4908 CpE Design 2}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large \today\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Alpha objective}
+%=============================================================================
+
+The alpha goal is \textbf{Safe Exam Browser running on the Debian board}: a student-facing locked browser on the RISC-V hardware.
+
+Repository: \url{https://github.com/cannon-spencer/riscv-exam-computer}
+
+CI in \texttt{reptilian-riscv} builds the Debian image. Scripts here flash that image and install on-device software (\texttt{flash-os.sh}, \texttt{install-software.sh}). A board can boot Debian, join the network, and run \texttt{seb-agent}, which POSTs a heartbeat to a listener.
+
+%=============================================================================
+\section{Vertical features}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}X@{}}
+    \toprule
+    \textbf{Element} & \textbf{Alpha} \\
+    \midrule
+    External interface &
+    Debian session on the Orange Pi RV (login, network). SEB is the locked student browser on that session. \\
+    Persistent state &
+    Flashed OS image; \texttt{seb-agent} env (\texttt{CONTROL\_URL}) written by the install script. \\
+    Internal systems &
+    CI Debian build; \texttt{flash-os.sh} and \texttt{install-software.sh}; \texttt{seb-agent} heartbeat. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Vertical features in the alpha build.}
+  \label{tab:vertical}
+\end{table}
+
+%=============================================================================
+\section{Specification mapping}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \small
+  \setlength{\tabcolsep}{6pt}
+  \begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}X@{}}
+    \toprule
+    \textbf{Criterion} & \textbf{Alpha} \\
+    \midrule
+    Usability &
+    Dedicated Debian board: power on, log in, network. SEB is the exam control surface on that session. \\
+    Interface &
+    Debian desktop; \texttt{seb-agent} heartbeat over HTTP; image and agent env as persistent state. \\
+    Navigation &
+    Repeatable path: flash, boot, UART or SSH, Wi-Fi via \texttt{nmtui}. Scripts wrap flash and software install. \\
+    Perception &
+    Login and desktop on HDMI; serial/SSH output; \texttt{seb-agent} logs each heartbeat. \\
+    Responsiveness &
+    \texttt{seb-agent} yields between POSTs (\texttt{sleep} 5\,s) rather than busy-waiting on I/O. \\
+    Robustness &
+    CI image, flash, and boot complete under normal lab use (UART, SSH, outbound IP). \\
+    Consistency &
+    The same published image and scripts produce a booting Debian board and a heartbeat POST. \\
+    Aesthetic rigor &
+    Debian session is the on-device surface; SEB supplies the exam chrome. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{M3 specification mapping.}
+  \label{tab:rubric}
+\end{table}
+
+%=============================================================================
+\section{Work completed}
+%=============================================================================
+
+\begin{itemize}\setlength{\itemsep}{0.12em}
+  \item CI-built Debian image for the Orange Pi RV; \texttt{flash-os.sh} writes it to SD.
+  \item Board boots, UART, Wi-Fi, SSH, outbound IP.
+  \item \texttt{install-software.sh} deploys \texttt{seb-agent}. A heartbeat POST reaches a LAN listener.
+  \item \texttt{seb-linux} is in-tree as a submodule. Prior compile issues on riscv64 (WebKitGTK path) still have to be cleared on this image so SEB can launch.
+\end{itemize}
+
+\todo
+
+%=============================================================================
+\section{Known bugs and limitations}
+%=============================================================================
+
+SEB is not yet auto-installed or launched on the image. Agent start/stop and config, instructor UI, Canvas exam flow, and kernel hardening are later work.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{0.12\textwidth}X p{0.28\textwidth}@{}}
+    \toprule
+    \textbf{ID} & \textbf{Description} & \textbf{Status} \\
+    \midrule
+    BUG-01 &
+    Qt6 \texttt{signals} vs.\ GLib/GTK \texttt{signals} in the \texttt{seb-linux} WebKitGTK backend. &
+    Reported upstream; verify on this image \\
+    BUG-02 &
+    Spell-check language pointer type in \texttt{webkitgtk\_profile.cpp}. &
+    Reported upstream; verify on this image \\
+    BLK-02 &
+    No riscv64 Qt6 WebEngine; WebKitGTK fallback is the board browser path. &
+    Constraint \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Known bugs.}
+  \label{tab:bugs}
+\end{table}
+
+\end{document}

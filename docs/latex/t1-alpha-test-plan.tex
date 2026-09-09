@@ -1,0 +1,188 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\newcommand{\todo}{\textit{TODO}}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{T1: Alpha Test Plan}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{EEL4908 CpE Design 2}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large \today\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Scope}
+%=============================================================================
+
+This plan is for the alpha build. The pass criterion is \textbf{Safe Exam Browser running on the CI-built Debian image} on the Orange Pi RV.
+
+\paragraph{In scope.}
+Image flash and boot; network; build and launch of \texttt{seb-linux} on that Debian; basic lockdown once SEB is up.
+
+\paragraph{Out of scope.}
+Instructor control plane (start/stop jobs, fleet UI), Canvas exam completion, and kernel hardening.
+
+\paragraph{Lab baseline.}
+Default login \texttt{orangepi}/\texttt{orangepi}. UART 115200. \todo
+
+%=============================================================================
+\section{Expected behavior}
+%=============================================================================
+
+\todo
+
+\subsection{Board and image}
+\label{sec:eb-boot}
+
+CI in \texttt{reptilian-riscv} publishes a Debian \texttt{os.img.xz}. \texttt{flash-os.sh} writes it to SD. After power, the board reaches a Linux login (UART and SSH). Wi-Fi or Ethernet yields IPv4 and outbound connectivity.
+
+\subsection{SEB on Debian}
+\label{sec:eb-seb}
+
+\begin{itemize}\setlength{\itemsep}{0.12em}
+  \item \texttt{seb-linux} builds on riscv64 using the WebKitGTK fallback (no Qt6 WebEngine package).
+  \item SEB launches on the Debian graphical session.
+  \item While running: fullscreen; ordinary desktop exit paths do not dismiss the kiosk; policy-blacklisted processes are refused or terminated.
+\end{itemize}
+
+\todo
+
+\subsection{\texttt{seb-agent} heartbeat}
+\label{sec:eb-hb}
+
+\texttt{install-software.sh} copies \texttt{seb-agent} to the board. The agent POSTs a JSON heartbeat to a control URL every 5\,s.
+
+%=============================================================================
+\section{Test procedures}
+\label{sec:proc}
+%=============================================================================
+
+Each test: preconditions, steps, pass/fail.
+
+\subsection{Bring-up}
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.10\textwidth}X@{}}
+    \toprule
+    \textbf{ID} & \textbf{Procedure} \\
+    \midrule
+    HW-01 &
+    \textbf{Flash and boot.} \texttt{diskutil list} (never \texttt{disk0}); \texttt{./scripts/flash-os.sh --device /dev/rdiskN}; power with UART; \texttt{screen /dev/cu.usbserial-*} \texttt{115200}.
+    \textbf{Pass:} Linux login, not an initramfs emergency shell. \\
+    HW-02 &
+    \textbf{SSH.} Same LAN; \texttt{ssh orangepi@<board-ip>}.
+    \textbf{Pass:} session opens; \texttt{uname -m} is \texttt{riscv64}. \\
+    HW-03 &
+    \textbf{Outbound network.} \texttt{ping -c 4} to a known host (or campus DNS).
+    \textbf{Pass:} replies, or a documented firewall exception. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Bring-up tests.}
+  \label{tab:hw}
+\end{table}
+
+\subsection{SEB}
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.10\textwidth}X@{}}
+    \toprule
+    \textbf{ID} & \textbf{Procedure} \\
+    \midrule
+    SW-01 &
+    \textbf{Build \texttt{seb-linux} on the board.} Pre: HW-02; Qt6 base + WebKitGTK deps.
+    Steps: \todo
+    \textbf{Pass:} a SEB binary exists. If BUG-01/02 recur, log them and fail this test. \\
+    INT-01 &
+    \textbf{SEB launches.} Pre: SW-01; graphical session.
+    Steps: \todo
+    \textbf{Pass:} SEB window/kiosk is visible on the board display. \\
+    INT-02 &
+    \textbf{Lockdown smoke.} Pre: INT-01.
+    Steps: try standard exit shortcuts; optionally start a blacklisted app if policy defines one.
+    \textbf{Pass:} cannot leave by those paths; refuse-to-start or terminate matches policy. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{SEB tests.}
+  \label{tab:seb}
+\end{table}
+
+\subsection{\texttt{seb-agent} heartbeat}
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.10\textwidth}X@{}}
+    \toprule
+    \textbf{ID} & \textbf{Procedure} \\
+    \midrule
+    SW-02 &
+    \textbf{\texttt{seb-agent} heartbeat.} Pre: HW-03; laptop HTTP server on port 8000; \texttt{install-software.sh} with that \texttt{--control-url}.
+    Run \texttt{\textasciitilde/seb-agent} on the board.
+    \textbf{Pass:} POST \texttt{/heartbeat} from the board about every 5\,s. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{\texttt{seb-agent} heartbeat.}
+  \label{tab:hb}
+\end{table}
+
+%=============================================================================
+\section{Traceability}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{0.42\textwidth}X@{}}
+    \toprule
+    \textbf{Expected behavior} & \textbf{Tests} \\
+    \midrule
+    Debian flash/boot/network (\S\ref{sec:eb-boot}) & HW-01, HW-02, HW-03 \\
+    SEB builds, launches, lockdown (\S\ref{sec:eb-seb}) & SW-01, INT-01, INT-02 \\
+    \texttt{seb-agent} heartbeat (\S\ref{sec:eb-hb}) & SW-02 \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Expected behavior to tests.}
+  \label{tab:trace}
+\end{table}
+
+\end{document}
