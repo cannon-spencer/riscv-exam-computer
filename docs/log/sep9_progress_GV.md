@@ -9,7 +9,7 @@ added the two we needed (`GDK_BACKEND`, `WEBKIT_DISABLE_COMPOSITING_MODE`) to th
 - Result: SEB now boots, asks for admin permission, and renders a real webpage fullscreen on the board.
 
 ## How to boot the board
-1. Power on with HDMI (monitor) + UART connected.
+1. Power on with HDMI (monitor) + accessories 
 2. Manual U-Boot sequence:
    ```
    mmc dev 1
@@ -17,7 +17,7 @@ added the two we needed (`GDK_BACKEND`, `WEBKIT_DISABLE_COMPOSITING_MODE`) to th
    sysboot mmc 1:1 any 0x40200000
    ```
 3. Board boots straight into a desktop (may require login)/`startx` needed.
-4. Open a terminal **inside that desktop session**
+4. Open a terminal **inside that desktop session** (use the GUI)
 
 ## Exact command that loaded Canvas
 ```
