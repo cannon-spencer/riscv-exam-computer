@@ -56,13 +56,13 @@ Image flash and boot; network; build and launch of \texttt{seb-linux} on that De
 Instructor control plane (start/stop jobs, fleet UI), Canvas exam completion, and kernel hardening.
 
 \paragraph{Lab baseline.}
-Default login \texttt{orangepi}/\texttt{orangepi}. UART 115200. \todo
+Default login \texttt{orangepi}/\texttt{orangepi}. UART 115200. %\todo
 
 %=============================================================================
 \section{Expected behavior}
 %=============================================================================
 
-\todo
+%\todo
 
 \subsection{Board and image}
 \label{sec:eb-boot}
@@ -78,7 +78,7 @@ CI in \texttt{reptilian-riscv} publishes a Debian \texttt{os.img.xz}. \texttt{fl
   \item While running: fullscreen; ordinary desktop exit paths do not dismiss the kiosk; policy-blacklisted processes are refused or terminated.
 \end{itemize}
 
-\todo
+%\todo
 
 \subsection{\texttt{seb-agent} heartbeat}
 \label{sec:eb-hb}
@@ -129,11 +129,11 @@ Each test: preconditions, steps, pass/fail.
     \midrule
     SW-01 &
     \textbf{Build \texttt{seb-linux} on the board.} Pre: HW-02; Qt6 base + WebKitGTK deps.
-    Steps: \todo
+    Steps: attempt to find a SEB binary
     \textbf{Pass:} a SEB binary exists. If BUG-01/02 recur, log them and fail this test. \\
     INT-01 &
     \textbf{SEB launches.} Pre: SW-01; graphical session.
-    Steps: \todo
+    Steps: attempt to launch SEB via terminal commands
     \textbf{Pass:} SEB window/kiosk is visible on the board display. \\
     INT-02 &
     \textbf{Lockdown smoke.} Pre: INT-01.
