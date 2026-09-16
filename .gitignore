@@ -6,6 +6,7 @@ cache/
 
 # Rust
 exam-env/seb-agent/target/
+exam-env/server/target/
 
 # macOS
 .DS_Store
