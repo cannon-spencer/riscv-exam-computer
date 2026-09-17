@@ -8,5 +8,8 @@ cache/
 exam-env/seb-agent/target/
 exam-env/server/target/
 
+# Local deploy secrets
+.env
+
 # macOS
 .DS_Store
