@@ -12,11 +12,19 @@ SD card in this machine (`diskutil list`; never `disk0`):
 ./scripts/flash-os.sh --device /dev/rdiskN
 ```
 
+Control server (Docker on the VM already; Colima running locally):
+
+```bash
+./scripts/deploy-server.sh --host opc@PUBLIC_IP
+```
+
+Or put `SERVER_HOST=opc@PUBLIC_IP` in `.env`.
+
 Board booted and on Wi‑Fi:
 
 ```bash
 ./scripts/install-software.sh --host orangepi@10.0.0.xx \
-  --control-url http://10.0.0.yy:8000
+  --control-url http://PUBLIC_IP:8000
 ```
 
 ## How the OS is built
@@ -41,6 +49,7 @@ https://github.com/cannon-spencer/reptilian-riscv/releases/download/orangepi-rv/
 - `exam-env/` — board agent, server API, admin UI
 - `scripts/flash-os.sh` — write the SD image
 - `scripts/install-software.sh` — cross-compile `seb-agent` and scp to a booted board
+- `scripts/deploy-server.sh` — Docker-build `exam-env/server` and run it on the VM
 - `docs/` — course LaTeX
 
 ## Clone
