@@ -6,7 +6,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CRATE="$ROOT/exam-env/seb-agent"
-ENV_FILE="$ROOT/.env"
 TARGET="riscv64gc-unknown-linux-gnu"
 HOST=""
 CONTROL_URL_ARG=""
@@ -16,7 +15,7 @@ SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10)
 usage() {
   echo "Usage: $(basename "$0") --host <user@ip> [--control-url <url>]"
   echo "  --host          SSH target, e.g. orangepi@10.0.0.40"
-  echo "  --control-url   baked into ~/seb-agent.env (or CONTROL_URL / SERVER_HOST in .env)"
+  echo "  --control-url   baked into ~/seb-agent.env (or export CONTROL_URL)"
   echo
   echo "BOARD_PASS defaults to orangepi (image default). Export to override."
 }
@@ -55,7 +54,6 @@ copy_agent() {
 }
 
 write_control_url() {
-  [[ -z "$CONTROL_URL" ]] && return
   remote "printf '%s\n' 'CONTROL_URL=$CONTROL_URL' > ~/seb-agent.env"
   echo "wrote $HOST:~/seb-agent.env"
 }
@@ -69,16 +67,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-  set +a
-fi
-
-CONTROL_URL="${CONTROL_URL_ARG:-${CONTROL_URL:-}}"
-if [[ -z "$CONTROL_URL" && -n "${SERVER_HOST:-}" ]]; then
-  CONTROL_URL="http://${SERVER_HOST#*@}:8000"
+if [[ -n "$CONTROL_URL_ARG" ]]; then
+  CONTROL_URL="$CONTROL_URL_ARG"
+else
+  : "${CONTROL_URL:?set CONTROL_URL or pass --control-url}"
 fi
 
 [[ -n "$HOST" ]] || { usage >&2; die "--host is required"; }
@@ -89,8 +81,4 @@ write_control_url
 
 echo
 echo "on the board:"
-if [[ -n "$CONTROL_URL" ]]; then
-  echo "  set -a && source ~/seb-agent.env && set +a && ~/seb-agent"
-else
-  echo "  CONTROL_URL=http://<server-ip>:8000 ~/seb-agent"
-fi
+echo "  set -a && source ~/seb-agent.env && set +a && ~/seb-agent"
