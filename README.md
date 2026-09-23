@@ -12,16 +12,15 @@ SD card in this machine (`diskutil list`; never `disk0`):
 ./scripts/flash-os.sh --device /dev/rdiskN
 ```
 
-Control server on local machine (Colima running; same Wi‑Fi as the board):
+Starts Docker and the Cloudflare tunnel:
 
 ```bash
 ./scripts/deploy-server.sh
 ```
 
-Board booted and on Wi‑Fi:
+Board (agent POSTs to `https://riscv-exam-computer.download`):
 
 ```bash
-export CONTROL_URL=http://<this-mac-lan-ip>:8000
 ./scripts/install-software.sh --host orangepi@10.0.0.xx
 ```
 

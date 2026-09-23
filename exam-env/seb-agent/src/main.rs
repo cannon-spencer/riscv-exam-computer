@@ -5,10 +5,7 @@ fn main() {
     let name = std::env::var("HOSTNAME")
         .unwrap_or_else(|_| "unknown".into());
 
-    let base = std::env::var("CONTROL_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:8000".into());
-
-    let url = format!("{base}/heartbeat");
+    let url = "https://riscv-exam-computer.download/heartbeat";
     let body = format!(r#"{{"host":"{name}","state":"idle"}}"#);
 
     loop {
