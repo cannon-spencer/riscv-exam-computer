@@ -11,7 +11,7 @@ fn main() {
     loop {
         println!("heartbeat host={name}");
 
-        match ureq::post(&url)
+        match ureq::post(url)
             .header("Content-Type", "application/json")
             .send(&body)
         {
