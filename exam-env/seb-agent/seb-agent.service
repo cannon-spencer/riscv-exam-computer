@@ -1,0 +1,14 @@
+[Unit]
+Description=seb-agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/seb-agent
+Environment=HOSTNAME=%H
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
