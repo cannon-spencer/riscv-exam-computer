@@ -3,4 +3,4 @@
 	url = https://github.com/cannon-spencer/reptilian-riscv.git
 [submodule "platform/seb-linux"]
 	path = platform/seb-linux
-	url = git@github.com:Jvr2022/seb-linux.git
+	url = https://github.com/cannon-spencer/seb-linux.git
