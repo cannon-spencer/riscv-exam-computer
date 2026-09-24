@@ -4,14 +4,13 @@
 
 ## GPU
 
-- The GPU is a PowerVR BXE-4-32 (StarFive JH7110). Firmware BVNC 36.50.54.182 (from `dmesg`).
+- The GPU is a PowerVR BXE-4-32 (StarFive JH7110). `dmesg` shows BVNC 36.50.54.182, firmware and shader images loaded, and `Initialized pvr 1.17.6210866`.
 - The kernel driver is `pvrsrvkm`, built into the kernel (`lsmod` shows nothing, and `card0` is bound to it).
 - The display controller is separate: `card1`, driver `starfive`, HDMI at 1920x1080.
-- Vendor userspace is installed, all version 1.17.6210866, dated Aug 2024, owned by no package: `libsrv_um`, `libpvr_dri_support`, `libGLESv1_CM_PVR_MESA`, `libGLESv2_PVR_MESA` (checked with `ls` and `dpkg -S`).
-- No PowerVR EGL library or glvnd vendor file exists.
-- Nothing uses the GPU. `eglinfo` reports Mesa `kms_swrast`, and WebKit loads `swrast_dri.so` and LLVM (llvmpipe), seen in `/proc/<pid>/maps`.
-- `pvr_dri.so` is the 273520-byte PowerVR support library, not a Mesa driver, so Mesa fails with `undefined symbol: __driDriverExtensions`.
-- PowerVR kernel and userspace driver versions must match.
+- Userspace PowerVR libraries in `/usr/lib` are the same version, 1.17.6210866.
+- GNOME uses the GPU. `gnome-shell` has `libGLESv2_PVR_MESA`, `libsrv_um` and `/dev/dri/renderD128` mapped (`/proc/<pid>/maps`), and the `pvrsrvkm` interrupt counter read 25,822 (`/proc/interrupts`).
+- On the stock image, `pvr_dri.so`, `swrast_dri.so` and `kms_swrast_dri.so` are the same 15.8 MB Mesa file (hard links). Mesa is 22.3.5-1.1, and `dpkg -V` reports no modified files.
+- PowerVR kernel and userspace driver versions must match, and they do.
 
 ## Board
 
