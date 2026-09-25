@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download the CI SEB binary if needed, then copy it onto a board.
+# Download the release SEB binary if needed, then copy it onto a board.
 
 set -euo pipefail
 
