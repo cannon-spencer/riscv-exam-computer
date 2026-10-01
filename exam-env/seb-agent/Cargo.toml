@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 ureq = "3.4.0"
+serde_json = "1.0.151"

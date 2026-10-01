@@ -1,0 +1,1 @@
+orangepi ALL=(root) NOPASSWD: /home/orangepi/start-seb.sh, /home/orangepi/stop-seb.sh

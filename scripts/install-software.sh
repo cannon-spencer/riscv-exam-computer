@@ -62,6 +62,19 @@ copy_agent() {
   echo "copy $BIN -> $HOST:~/seb-agent"
   remote_copy "$BIN" "~/seb-agent"
   remote "chmod +x ~/seb-agent"
+
+  echo "copy start-seb.sh -> $HOST:~/start-seb.sh"
+  remote_copy "$CRATE/start-seb.sh" "~/start-seb.sh"
+  remote "chmod +x ~/start-seb.sh"
+
+  echo "copy stop-seb.sh -> $HOST:~/stop-seb.sh"
+  remote_copy "$CRATE/stop-seb.sh" "~/stop-seb.sh"
+  remote "chmod +x ~/stop-seb.sh"
+
+  echo "install sudoers for start/stop-seb.sh"
+  remote_copy "$CRATE/seb-start.sudoers" "/tmp/seb-start.sudoers"
+  remote_sudo "visudo -cf /tmp/seb-start.sudoers"
+  remote_sudo "install -m 440 /tmp/seb-start.sudoers /etc/sudoers.d/seb-start"
 }
 
 install_agent_service() {
