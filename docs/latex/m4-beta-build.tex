@@ -1,0 +1,188 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{M4: Beta Build}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{EEL4908 CpE Design 2}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large October 2, 2026\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Beta objective}
+%=============================================================================
+
+The beta goal is a \textbf{classroom bring-up path} plus a \textbf{control loop}: boards phone home, and an instructor start/stop command launches or tears down Safe Exam Browser on every online board. T2 states the demo bar as two boards accepting one start command. This report is the build that that plan tests.
+
+Repository: \url{https://github.com/cannon-spencer/riscv-exam-computer}.
+
+Commit tested: \texttt{027d47894359fdc4bdf7c9e229fe81d56dff1a36}
+
+Demo video: TODO
+
+Alpha (M3) flashed a CI Debian image and proved a heartbeat to a LAN listener. SEB was in-tree but not auto-installed. Beta iterates that: pre-built SEB and \texttt{seb-agent} install in minutes, the heartbeat goes through a public HTTPS name, and start/stop is a job in the heartbeat reply.
+
+%=============================================================================
+\section{Vertical features}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.22\textwidth}X@{}}
+    \toprule
+    \textbf{Element} & \textbf{Beta} \\
+    \midrule
+    External interface &
+    Student: SEB on HDMI (\texttt{xinit} + openbox). Instructor: HTTP API (\texttt{GET /machines}, \texttt{POST /start}, \texttt{POST /stop}) on the laptop, reached as \url{https://riscv-exam-computer.download}. \\
+    Persistent state &
+    CI OS image on SD; \texttt{\~{}/safe-exam-browser}; \texttt{\~{}/seb-agent} user unit; \texttt{start-seb.sh} / \texttt{stop-seb.sh}; sudoers. Server inventory is in memory only. \\
+    Internal systems &
+    \texttt{flash-os.sh}, \texttt{install-software.sh}, \texttt{install-seb.sh}, \texttt{deploy-server.sh}. Agent POSTs heartbeat every 5\,s and execs the sudo wrappers. Server queues at most one job per host. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Vertical features in the beta build.}
+  \label{tab:vertical}
+\end{table}
+
+%=============================================================================
+\section{Specification mapping}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \small
+  \setlength{\tabcolsep}{6pt}
+  \begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}X@{}}
+    \toprule
+    \textbf{Criterion} & \textbf{Beta} \\
+    \midrule
+    Usability &
+    Flash + the two install scripts put agent and SEB on a board. Instructor starts and stops SEB without SSH. Student sees SEB on HDMI. Remaining product work is exam configuration from the server and making the kiosk usable on this SoC. \\
+    Interface &
+    Public HTTPS heartbeat and job reply; localhost \texttt{:8000} for development. HDMI is the student surface. No instructor web UI yet (\texttt{curl} is the control). \\
+    Navigation &
+    Repeatable: flash image, install agent, install SEB, \texttt{deploy-server.sh}, then \texttt{POST /start} and \texttt{/stop}. Campus SSH uses ufdevice + Tailscale. \\
+    Perception &
+    Docker logs show heartbeats. \texttt{/machines} lists host, state, and age. HDMI: SEB up after start, text console after stop. Agent journal records started/stopped.
+    Non-team user testing: TODO \\
+    Responsiveness &
+    Agent sleeps 5\,s between POSTs (no busy wait). Jobs ride the next heartbeat (at most one interval plus launch). Canvas click latency is a known limit, not a control-loop failure. \\
+    Robustness &
+    User systemd unit restarts the agent; linger keeps it up without a login. Stop script restores the framebuffer console. Control URL has no auth (see bugs). \\
+    Consistency &
+    Same release ELF, same scripts, same public URL. \texttt{/start} broadcasts to every host seen in the last 15\,s. \\
+    Aesthetic rigor &
+    Lightweight image (no GNOME). SEB is the exam chrome; openbox is only enough window manager for the WebKit view. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{M4 specification mapping.}
+  \label{tab:rubric}
+\end{table}
+
+%=============================================================================
+\section{Work completed this milestone}
+%=============================================================================
+
+Work since the alpha build (T1/M3). Dated notes live under \texttt{docs/log/}.
+
+\paragraph{Classroom bring-up.}
+\texttt{flash-os.sh} writes the GitHub Orange Pi image.
+\texttt{install-seb.sh} copies the pre-compiled SEB ELF and Qt/WebKit packages.
+\texttt{install-software.sh} deploys the agent user unit (linger) and the start/stop scripts plus sudoers.
+The lab board already runs the X session (\texttt{openbox} / \texttt{xorg} / \texttt{xinit}); \texttt{install-seb.sh} does not yet apt those packages.
+Board bring-up is minutes, not an on-desk SEB compile.
+
+\paragraph{Control plane.}
+Oracle VM dropped. \texttt{deploy-server.sh} runs Axum in Docker and a named Cloudflare tunnel. The agent POSTs to \url{https://riscv-exam-computer.download/heartbeat}. The server records hosts and returns \texttt{job: start|stop}. \texttt{POST /start} and \texttt{/stop} enqueue every online board. One board (\texttt{orangepirv}) is written up: queued, HDMI session, stop back to vt1. Two-board start (T2 DEMO-01): TODO
+
+\paragraph{Kiosk session.}
+No desktop on the fleet image. \texttt{start-seb.sh} is \texttt{xinit} on \texttt{:1} vt3, openbox, WebKitGTK SEB, \texttt{--windowed}. Lab launches use a local start file (not in the repo). Next is a server-pushed \texttt{.seb}.
+
+\paragraph{Parallel GPU work (isolated board).}
+WebKitGTK rebuilt with OpenGL ES ($\sim$11.5\,h) and SEB run in cage on PowerVR. GPU compositing verified; Canvas still CPU-bound (JS on one JH7110 core). That environment is not the fleet image. See the 9/30 GPU performance log.
+
+\paragraph{Campus access.}
+Eduroam does not allow laptop-to-board SSH. ufdevice + Tailscale is the documented path.
+
+%=============================================================================
+\section{Known bugs and limitations}
+%=============================================================================
+
+Beta is start/stop of a kiosk session. Remaining work is exam configuration and performance on this SoC. T2 is the test plan for this build.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{0.14\textwidth}X p{0.28\textwidth}@{}}
+    \toprule
+    \textbf{ID} & \textbf{Description} & \textbf{Status} \\
+    \midrule
+    BLK-02 &
+    No riscv64 Qt6 WebEngine; WebKitGTK is the browser. &
+    Constraint \\
+    PERF-01 &
+    Full Canvas is not exam-usable. Clicks take many seconds; GPU path (isolated board) only composites/scrolls. JS stays on one core. &
+    Open; thinner start URL is the next try \\
+    LIM-01 &
+    Control API has no authentication. Anyone who knows the URL can POST \texttt{/start}. &
+    Open \\
+    LIM-02 &
+    \texttt{/start} and \texttt{/stop} broadcast to all online boards; no per-board targeting. &
+    By design for beta \\
+    LIM-03 &
+    Server inventory is in memory only (lost on restart). &
+    Open \\
+    LIM-04 &
+    Fleet kiosk is X11/\texttt{xinit}; GLES+cage work is not merged into install scripts. &
+    Two tracks \\
+    LIM-05 &
+    Server does not yet distribute exam configuration (\texttt{.seb}). &
+    Next \\
+    BUG-03 &
+    Failed UF login can land on ufl.edu with no way back under lockdown. &
+    Open \\
+    BUG-01, BUG-02 &
+    Alpha WebKitGTK \texttt{signals} / spell-check pointer issues on the release ELF. &
+    TODO \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Known bugs and limitations.}
+  \label{tab:bugs}
+\end{table}
+
+\end{document}
