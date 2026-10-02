@@ -56,3 +56,16 @@ https://github.com/cannon-spencer/reptilian-riscv/releases/download/orangepi-rv/
 ```bash
 git clone --recurse-submodules https://github.com/cannon-spencer/riscv-exam-computer.git
 ```
+
+## Architecture
+
+Boards poll the server; the server never connects to a board.
+
+![Control path](docs/artifacts/control-path.png)
+
+Agent loop (`exam-env/seb-agent`):
+
+![Agent loop](docs/artifacts/agent-loop.png)
+
+Beta build and known bugs: [docs/latex/m4-beta-build.tex](docs/latex/m4-beta-build.tex).
+Test plan: [docs/latex/t2-beta-test-plan.tex](docs/latex/t2-beta-test-plan.tex).
