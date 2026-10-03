@@ -82,17 +82,17 @@
 
 Repository: \url{https://github.com/cannon-spencer/riscv-exam-computer}. Commit tested: \texttt{027d47894359fdc4bdf7c9e229fe81d56dff1a36}
 
-\paragraph{In scope.} Control server, board agent, start and stop scripts, SEB session on the board. \todo (add or remove items)
+\paragraph{In scope.} Control server, board agent, start and stop scripts and sudoers rule, the install scripts, the SEB kiosk session on the board, and the lockdown and performance items carried over from alpha.
 
-\paragraph{Out of scope.} \todo
+\paragraph{Out of scope.} Canvas exam completion; kernel and boot-chain hardening (including \path{scripts/verity}); an instructor web interface (\path{exam-env/frontend} is empty, so the instructor uses \texttt{curl}); server-pushed exam configuration; and the separate GPU/cage build, which lives on one isolated board and is not in the repository.
 
-\paragraph{Notation.} \todo marks something for the team to fill in or confirm; where the blank is not obvious, a short note after the colon says what to write. Nothing marked TODO has been measured or decided.
+\paragraph{Notation.} A value marked \prop\ is a proposed target chosen by the team, not derived from the code or a stakeholder requirement. The first full test run records a baseline, and the team then confirms or revises each such value.
 
 %=============================================================================
 \section{Alpha test results}
 %=============================================================================
 
-Describe the results of the alpha testing, how they changed the project, and how they influenced this plan. In the table below, give each test a result (Pass, Fail or Not run) and note the evidence.
+Results come from the M3 alpha report and the dated engineering logs in \path{docs/log/}. Where no result was recorded, the table says so.
 
 \subsection{Results against the T1 plan}
 
@@ -101,24 +101,40 @@ Describe the results of the alpha testing, how they changed the project, and how
 \textbf{T1 ID} & \textbf{Result} & \textbf{Evidence and notes} \\
 \midrule
 \endhead
-HW-01 & \todo & \todo \\
-HW-02 & \todo & \todo \\
-HW-03 & \todo & \todo \\
-SW-01 & \todo & \todo \\
-INT-01 & \todo & \todo \\
-INT-02 & \todo & \todo \\
-SW-02 & \todo & \todo \\
+HW-01 & Pass & Image flashes and boots to a login over UART (M3 report). \\
+HW-02 & Pass & SSH works on a lab LAN. On campus Wi-Fi the board must be registered as a UF device and reached over Tailscale (log 2026-09-23). \\
+HW-03 & Pass & Outbound IP works over Wi-Fi (M3 report). \\
+SW-01 & Pass, approach changed & Building \texttt{seb-linux} on each board failed repeatedly (log 2026-09-23). SEB is now built once on a board and published as a riscv64 release binary that \texttt{install-seb.sh} copies to each board (log 2026-09-25). \\
+INT-01 & Pass, with a performance caveat & SEB launches in an \texttt{xinit} session with \texttt{openbox} on virtual terminal 3 and loads Canvas, but clicks take 10\,s or more (log 2026-09-30). \\
+INT-02 & Not run & No lockdown result is recorded. The test is carried into beta as LD-01. \\
+SW-02 & Pass & Heartbeat reached a LAN listener (M3 report) and later the Cloudflare-tunnelled server (log 2026-09-23). \\
 \bottomrule
 \caption{Alpha results.}\label{tab:alpha}
 \end{longtable}
 
 \subsection{How alpha testing changed the project}
 
-\todo[for each alpha finding, say what you saw and what you changed]
+\begin{itemize}\setlength{\itemsep}{0.12em}
+  \item \textbf{On-board SEB builds were unreliable} (log 2026-09-23). SEB is now built once on a board and installed from a riscv64 release binary.
+  \item \textbf{Campus networks block inbound connections.} The control server moved from an Oracle Cloud VM, which ran out of memory on package installs, to a laptop behind a Cloudflare tunnel, so boards only make outbound HTTPS requests (log 2026-09-23). Eduroam also blocks SSH to the board, so boards are registered as UF devices and reached over Tailscale.
+  \item \textbf{Canvas is very slow on the board.} Clicks take 10\,s or more and the page paints in tiles (log 2026-09-30). A separate investigation on an isolated board found the SEB web process at 100\% of one core and a post-login load of over two minutes in a single timed run. That work is not in the repository.
+  \item \textbf{Thermals and display glitches.} Two sessions of about 12 hours ran without a crash, but the board reached about 75\,\textdegree{}C with no heatsink or fan, and the display glitched several times (log 2026-09-30).
+  \item \textbf{A failed UF login leaves the user stuck} on \texttt{ufl.edu} under SEB's navigation lockdown (log 2026-09-30). It is recorded as BUG-03 in the M4 report and has no beta test.
+  \item \textbf{Control grew from a heartbeat to a job queue.} The server now keeps an inventory and one pending job per board, and the agent starts and stops SEB through sudo-whitelisted scripts (log 2026-09-30).
+\end{itemize}
 
 \subsection{How alpha testing shaped this plan}
 
-\todo[for each alpha finding, give the beta test ID that checks it]
+\begin{itemize}\setlength{\itemsep}{0.12em}
+  \item Release-binary install path: INS-01.
+  \item Network and control path: SRV-01 to SRV-09, AGT-02 to AGT-05, SEC-02, SEC-03.
+  \item Canvas speed: PERF-01, PERF-02.
+  \item Thermals and glitches: PERF-03, PERF-04.
+  \item Lockdown was not tested in alpha: LD-01.
+  \item Job queue: SRV, AGT, SES and DEMO tests, and EDGE-01.
+  \item The server identifies boards by hostname, so two boards flashed from one image can collide: AGT-01.
+  \item Failed-login trap: no beta test; tracked as BUG-03.
+\end{itemize}
 
 %=============================================================================
 \section{Expected behavior}
@@ -240,15 +256,15 @@ Job delivery rules (checked by SRV-01 to SRV-09):
     \midrule
     R-T1 & Heartbeat sleep after each request & 5\,s (observed period is sleep + RTT) \\
     R-T2 & A board counts as online while its last heartbeat is no older than & 15\,s (code) \\
-    R-T3 & Time from \texttt{POST /start} to SEB running on every online board, in seconds & \todo \\
-    R-T4 & Maximum difference between the two boards' start times, in seconds & \todo \\
-    R-T5 & Time from \texttt{POST /stop} to console restored, in seconds & \todo \\
-    R-P1 & Canvas page load time, in seconds & \todo \\
-    R-P2 & Click-to-response latency in Canvas, in seconds & \todo \\
-    R-P3 & Maximum board temperature during a session, in \textdegree{}C & \todo \\
+    R-T3 & Time from \texttt{POST /start} to SEB running on every online board, in seconds & 10\,s\prop \\
+    R-T4 & Maximum difference between the two boards' start times, in seconds & 5\,s\prop \\
+    R-T5 & Time from \texttt{POST /stop} to console restored, in seconds & 10\,s\prop \\
+    R-P1 & Canvas page load time, in seconds & login page $\le 30$\,s, post-login page $\le 60$\,s\prop \\
+    R-P2 & Click-to-response latency in Canvas, in seconds & median $\le 2$\,s\prop \\
+    R-P3 & Maximum board temperature during a session, in \textdegree{}C & $< 80$\,\textdegree{}C\prop \\
     \bottomrule
   \end{tabularx}
-  \caption{Quantified requirements. Rows marked TODO are to be set by the team.}
+  \caption{Quantified requirements. Values marked $\dagger$ are proposed targets.}
   \label{tab:req}
 \end{table}
 
@@ -258,8 +274,8 @@ Job delivery rules (checked by SRV-01 to SRV-09):
   \item The server code has no authentication on any route.
   \item \texttt{/start} and \texttt{/stop} address all online boards; there is no per-board targeting.
   \item The server does not distribute exam configuration; a later change is a pushed \texttt{.seb}.
-  \item Secure start (the exam opening only under SEB): \todo[describe what should happen, and how it would be tested]
-  \item Other: \todo
+  \item Secure start (the exam opening only under SEB): no mechanism exists yet; see SEC-01.
+  \item Paths and the account name are hardcoded (\texttt{orangepi}); the install scripts do not install \texttt{openbox}, \texttt{xorg} or \texttt{xinit}; and the local start file is not in the repository.
 \end{itemize}
 
 %=============================================================================
@@ -269,7 +285,7 @@ Job delivery rules (checked by SRV-01 to SRV-09):
 
 \subsection{Equipment and conventions}
 
-\todo[list the boards, displays, laptop, network and tools you actually use] Record the commit and board names for every run in Table~\ref{tab:log}.
+Two Orange Pi RV boards, each with an HDMI display, a USB keyboard, power and a UART adapter (115200 baud); a laptop running Docker and \texttt{cloudflared} with the \texttt{exam-server} tunnel; a network that reaches \path{https://riscv-exam-computer.download} (a lab network, or \texttt{ufdevice} with Tailscale for registered boards); and a stopwatch or screen recording. Record the commit and board names for every run in Table~\ref{tab:log}.
 
 \subsection{Server (no hardware)}
 
@@ -302,16 +318,16 @@ SRV-09 & \textbf{Offline exclusion.} Stop heartbeating for 16\,s, then \texttt{P
 \endhead
 INS-01 & \textbf{Fresh install.} Flash a card, run \texttt{install-software.sh} and \texttt{install-seb.sh} with \texttt{-{}-host}, then any manual steps. Record every manual step needed. \pass \texttt{systemctl -{}-user is-active seb-agent} prints \texttt{active}, \path{~/safe-exam-browser} exists and is executable, and the board appears in \texttt{/machines}. \\
 AGT-01 & \textbf{Unique identity.} On each board run \texttt{hostname} and \texttt{systemctl -{}-user show seb-agent -p Environment}. \pass \texttt{/machines} lists each board as a separate host. \\
-AGT-02 & \textbf{Cadence.} \texttt{journalctl -{}-user -u seb-agent -o short-precise -n 25}. \pass intervals match R-T1; acceptable range \todo. \\
-AGT-03 & \textbf{Outage tolerance.} Make the control URL unreachable for a set time, then restore it. \pass the agent keeps running, logs each failed heartbeat, and resumes heartbeating after restoration; duration and recovery time \todo. \\
-AGT-04 & \textbf{Agent crash recovery.} Kill the agent process. \pass the systemd unit restarts it; time limit \todo. \\
-AGT-05 & \textbf{Boot without login.} Power-cycle a board and do not log in. \pass the board is listed in \texttt{/machines}; time limit \todo. \\
+AGT-02 & \textbf{Cadence.} \texttt{journalctl -{}-user -u seb-agent -o short-precise -n 25}. \pass intervals match R-T1; acceptable range 4.5 to 7\,s. \\
+AGT-03 & \textbf{Outage tolerance.} Make the control URL unreachable for a set time, then restore it. \pass the agent keeps running, logs each failed heartbeat, and resumes heartbeating after restoration; outage of 60\,s\prop, with recovery within 15\,s of restoration\prop. \\
+AGT-04 & \textbf{Agent crash recovery.} Kill the agent process. \pass the systemd unit restarts it within 15\,s\prop. \\
+AGT-05 & \textbf{Boot without login.} Power-cycle a board and do not log in. \pass the board is listed in \texttt{/machines} within 90\,s\prop\ of power-on. \\
 SUDO-01 & \textbf{Sudo scope.} As \texttt{orangepi} run \texttt{sudo -n -l}. \pass only the two scripts are listed. \\
-SES-01 & \textbf{Start from console.} Run \texttt{sudo -n \~{}/start-seb.sh}. \pass SEB is visible on the display; time limit \todo. \\
+SES-01 & \textbf{Start from console.} Run \texttt{sudo -n \~{}/start-seb.sh}. \pass SEB is visible on the display within 30\,s\prop. \\
 SES-02 & \textbf{Stop from console.} Run \texttt{sudo -n \~{}/stop-seb.sh}. \pass no SEB or \texttt{xinit} process remains, the text console is shown and the keyboard works. \\
-SES-03 & \textbf{Repeated cycles.} Start and stop repeatedly, recording memory use each cycle. \pass every cycle meets SES-01 and SES-02; number of cycles and memory tolerance \todo. \\
+SES-03 & \textbf{Repeated cycles.} Start and stop repeatedly, recording memory use each cycle. \pass every cycle meets SES-01 and SES-02; 10 cycles\prop; available memory after the last cycle is within 10\%\prop\ of the first. \\
 SES-04 & \textbf{Duplicate start.} While running, send \texttt{POST /start} twice. \pass a single SEB session. \\
-SES-05 & \textbf{Config.} Confirm the board has a local start file for the lab launch (not a repo artifact). \pass SEB starts without a password prompt; expected start URL \todo. \\
+SES-05 & \textbf{Config.} Confirm the board has a local start file for the lab launch (not a repo artifact). \pass SEB starts without a password prompt; the start page is the UF Canvas site. \\
 \bottomrule
 \caption{Agent and board session tests.}\label{tab:agent}
 \end{longtable}
@@ -325,8 +341,8 @@ SES-05 & \textbf{Config.} Confirm the board has a local start file for the lab l
 \endhead
 DEMO-01 & \textbf{Two boards start and stop on one command.}
 Pre: SES-01, SES-02 and AGT-01 passed on both boards; both listed \texttt{idle} in \texttt{/machines}.
-Steps: (1) note the time; (2) \texttt{curl -sS -X POST \$CTRL/start}; (3) record when SEB appears on each display; (4) \texttt{GET /machines}; (5) \texttt{curl -sS -X POST \$CTRL/stop}; (6) record when each display returns to the console. Number of trials \todo.
-\pass \texttt{queued} lists both boards; SEB runs on both; \texttt{/machines} shows both \texttt{running}; after stop both are back at the console. Time limits R-T3 to R-T5 \todo. \\
+Steps: (1) note the time; (2) \texttt{curl -sS -X POST \$CTRL/start}; (3) record when SEB appears on each display; (4) \texttt{GET /machines}; (5) \texttt{curl -sS -X POST \$CTRL/stop}; (6) record when each display returns to the console. Three trials.
+\pass \texttt{queued} lists both boards; SEB runs on both; \texttt{/machines} shows both \texttt{running}; after stop both are back at the console. Time limits are R-T3 to R-T5. \\
 DEMO-02 & \textbf{Board offline at start.} Stop one board's agent, send \texttt{POST /start}. \pass \texttt{queued} lists only the other board. Restart the agent; record whether it launches SEB. Send \texttt{/start} again and record the result. \\
 DEMO-03 & \textbf{Board loses network while running.} With both running, disconnect one board. Record SEB state, the board's \texttt{seen\_secs\_ago}, and the \texttt{queued} list for a \texttt{POST /stop}. Reconnect and send \texttt{/stop} again. \\
 DEMO-04 & \textbf{Server restart.} With both boards running, restart the server. Record how long until both are listed again and with which state. \\
@@ -342,8 +358,8 @@ EDGE-01 & \textbf{Pending start after self-exit.} While a board reports \texttt{
 \textbf{ID} & \textbf{Procedure and pass criterion} \\
 \midrule
 \endhead
-LD-01 & \textbf{Exit paths.} With SEB started by the agent, try the key combinations, mouse actions and window actions the team lists here: \todo. \pass none gives a shell, another application or the console. Record each attempt and outcome. \\
-SEC-01 & \textbf{Secure start.} \todo[write what secure start should mean and how to test it]. \\
+LD-01 & \textbf{Exit paths.} With SEB started by the agent, try Alt+F4, Alt+Tab, Ctrl+Alt+F1 to F7, Ctrl+Alt+Backspace, Ctrl+Alt+Del, the Super key, Esc, right-click and middle-click on the desktop background, and moving, resizing or minimising the SEB window. \pass none gives a shell, another application or the console. Record each attempt and outcome. \\
+SEC-01 & \textbf{Secure start.} Deferred. The intended behavior is that an exam can only be started from SEB and a normal browser is refused; no mechanism has been chosen, so there is nothing to test yet. \\
 SEC-02 & \textbf{No inbound surface.} On a board run \texttt{ss -ltnp}. \pass no listening socket belongs to \texttt{seb-agent}. \\
 SEC-03 & \textbf{Control-channel access.} Record whether \texttt{POST /start} and \texttt{POST /stop} succeed from a machine with no credentials, with no exam running. \\
 \bottomrule
@@ -357,10 +373,10 @@ SEC-03 & \textbf{Control-channel access.} Record whether \texttt{POST /start} an
 \textbf{ID} & \textbf{Procedure and pass criterion} \\
 \midrule
 \endhead
-PERF-01 & \textbf{Page load.} Start SEB with \texttt{/start}; time the Canvas pages the team lists: \todo. Number of runs \todo. Report median and maximum. \pass R-P1. \\
-PERF-02 & \textbf{Input latency.} Time click to visible response over a set number of clicks \todo. \pass R-P2. \\
-PERF-03 & \textbf{Thermal.} Run a Canvas session of set length \todo\ while logging temperature at a set interval \todo (log method \todo). \pass R-P3. \\
-PERF-04 & \textbf{Endurance.} Run SEB for a set duration \todo. Count crashes, agent restarts and display glitches. \pass counts and limits \todo. \\
+PERF-01 & \textbf{Page load.} Start SEB with \texttt{/start}; time the Canvas login page and the post-login page. Five runs\prop. Report median and maximum. \pass R-P1. \\
+PERF-02 & \textbf{Input latency.} Time click to visible response over ten clicks\prop. \pass R-P2. \\
+PERF-03 & \textbf{Thermal.} Run a Canvas session of 60 minutes\prop\ while logging temperature once a minute by reading \path{/sys/class/thermal/thermal_zone*/temp}. \pass R-P3. \\
+PERF-04 & \textbf{Endurance.} Run SEB for 3 hours\prop. Count crashes, agent restarts and display glitches. \pass zero crashes, zero agent restarts and no heartbeat gap over 15\,s; record every display glitch. \\
 \bottomrule
 \caption{Performance tests.}\label{tab:perf}
 \end{longtable}
@@ -397,7 +413,7 @@ curl -sS -X POST $CTRL/stop      # both boards back at the console
     Timing requirements & AGT-02, DEMO-01, SES-01, SES-02 \\
     Performance requirements & PERF-01 to PERF-04 \\
     Lockdown and security & LD-01, SEC-01 to SEC-03 \\
-    Alpha findings & \todo \\
+    Alpha findings & INS-01, AGT-01, LD-01, SEC-02, SEC-03, PERF-01 to PERF-04 \\
     \bottomrule
   \end{tabularx}
   \caption{Expected behavior to tests.}
