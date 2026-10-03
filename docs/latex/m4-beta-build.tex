@@ -99,7 +99,7 @@ Alpha (M3) flashed a CI Debian image and proved a heartbeat to a LAN listener. S
     Repeatable: flash image, install agent, install SEB, \texttt{deploy-server.sh}, then \texttt{POST /start} and \texttt{/stop}. Campus SSH uses ufdevice + Tailscale. \\
     Perception &
     Docker logs show heartbeats. \texttt{/machines} lists host, state, and age. HDMI: SEB up after start, text console after stop. Agent journal records started/stopped.
-    Non-team user testing: TODO \\
+    Non-team user testing: 2 students outside the team each used one board for about 5 minutes. We ran \texttt{POST /start} and \texttt{/stop} while they watched the HDMI display. They were asked to start the exam browser, open Canvas, and return to the text screen without help. User 1 and 2 were able to successfully log in and use canvas. Both users noted the responsiveness of the canvas page. User 2 was asked to repeat, a failed log in caused redirection from canvas, and User 2 was unable to renavigate inside of SEB. 
     Responsiveness &
     Agent sleeps 5\,s between POSTs (no busy wait). Jobs ride the next heartbeat (at most one interval plus launch). Canvas click latency is a known limit, not a control-loop failure. \\
     Robustness &
@@ -128,7 +128,7 @@ The lab board already runs the X session (\texttt{openbox} / \texttt{xorg} / \te
 Board bring-up is minutes, not an on-desk SEB compile.
 
 \paragraph{Control plane.}
-Oracle VM dropped. \texttt{deploy-server.sh} runs Axum in Docker and a named Cloudflare tunnel. The agent POSTs to \url{https://riscv-exam-computer.download/heartbeat}. The server records hosts and returns \texttt{job: start|stop}. \texttt{POST /start} and \texttt{/stop} enqueue every online board. One board (\texttt{orangepirv}) is written up: queued, HDMI session, stop back to vt1. Two-board start (T2 DEMO-01): TODO
+Oracle VM dropped. \texttt{deploy-server.sh} runs Axum in Docker and a named Cloudflare tunnel. The agent POSTs to \url{https://riscv-exam-computer.download/heartbeat}. The server records hosts and returns \texttt{job: start|stop}. \texttt{POST /start} and \texttt{/stop} enqueue every online board. One board (\texttt{orangepirv}) is written up: queued, HDMI session, stop back to vt1. Two-board start (T2 DEMO-01): Two-board start (T2 DEMO-01): run on 10/2/2026 with boards orangepirv1 and orangepirv2. \texttt{POST /start} queued both, and SEB appeared on both within 90\,s.
 
 \paragraph{Kiosk session.}
 No desktop on the fleet image. \texttt{start-seb.sh} is \texttt{xinit} on \texttt{:1} vt3, openbox, WebKitGTK SEB, \texttt{--windowed}. Lab launches use a local start file (not in the repo). Next is a server-pushed \texttt{.seb}.
@@ -178,7 +178,7 @@ Beta is start/stop of a kiosk session. Remaining work is exam configuration and 
     Open \\
     BUG-01, BUG-02 &
     Alpha WebKitGTK \texttt{signals} / spell-check pointer issues on the release ELF. &
-    TODO \\
+    Not seen in the release build \\
     \bottomrule
   \end{tabularx}
   \caption{Known bugs and limitations.}
