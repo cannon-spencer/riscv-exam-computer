@@ -128,7 +128,7 @@ The lab board already runs the X session (\texttt{openbox} / \texttt{xorg} / \te
 Board bring-up is minutes, not an on-desk SEB compile.
 
 \paragraph{Control plane.}
-Oracle VM dropped. \texttt{deploy-server.sh} runs Axum in Docker and a named Cloudflare tunnel. The agent POSTs to \url{https://riscv-exam-computer.download/heartbeat}. The server records hosts and returns \texttt{job: start|stop}. \texttt{POST /start} and \texttt{/stop} enqueue every online board. One board (\texttt{orangepirv}) is written up: queued, HDMI session, stop back to vt1. Two-board start (T2 DEMO-01): Two-board start (T2 DEMO-01): run on 10/2/2026 with boards orangepirv1 and orangepirv2. \texttt{POST /start} queued both, and SEB appeared on both within 90\,s.
+Oracle VM dropped. \texttt{deploy-server.sh} runs Axum in Docker and a named Cloudflare tunnel. The agent POSTs to \url{https://riscv-exam-computer.download/heartbeat}. The server records hosts and returns \texttt{job: start|stop}. \texttt{POST /start} and \texttt{/stop} enqueue every online board. One board (\texttt{orangepirv}) is written up: queued, HDMI session, stop back to vt1.Two-board start (T2 DEMO-01): run on 10/2/2026 with boards orangepirv1 and orangepirv2. \texttt{POST /start} queued both, and SEB appeared on both within 90\,s.
 
 \paragraph{Kiosk session.}
 No desktop on the fleet image. \texttt{start-seb.sh} is \texttt{xinit} on \texttt{:1} vt3, openbox, WebKitGTK SEB, \texttt{--windowed}. Lab launches use a local start file (not in the repo). Next is a server-pushed \texttt{.seb}.
