@@ -99,7 +99,7 @@ Alpha (M3) flashed a CI Debian image and proved a heartbeat to a LAN listener. S
     Repeatable: flash image, install agent, install SEB, \texttt{deploy-server.sh}, then \texttt{POST /start} and \texttt{/stop}. Campus SSH uses ufdevice + Tailscale. \\
     Perception &
     Docker logs show heartbeats. \texttt{/machines} lists host, state, and age. HDMI: SEB up after start, text console after stop. Agent journal records started/stopped.
-    Non-team user testing: 2 students outside the team each used one board for about 5 minutes. We ran \texttt{POST /start} and \texttt{/stop} while they watched the HDMI display. They were asked to start the exam browser, open Canvas, and return to the text screen without help. User 1 and 2 were able to successfully log in and use canvas. Both users noted the responsiveness of the canvas page. User 2 was asked to repeat, a failed log in caused redirection from canvas, and User 2 was unable to renavigate inside of SEB. 
+    Non-team user testing: 2 students outside the team each used one board for about 5 minutes. We ran \texttt{POST /start} and \texttt{/stop} while they watched the HDMI display. They were asked to start the exam browser, open Canvas, and return to the text screen without help. User 1 and 2 were able to successfully log in and use canvas. Both users noted the responsiveness of the canvas page. User 2 was asked to repeat, a failed log in caused redirection from canvas, and User 2 was unable to renavigate inside of SEB. \\
     Responsiveness &
     Agent sleeps 5\,s between POSTs (no busy wait). Jobs ride the next heartbeat (at most one interval plus launch). Canvas click latency is a known limit, not a control-loop failure. \\
     Robustness &
