@@ -1,9 +1,33 @@
+use sha2::{Digest, Sha256};
+use std::fs;
 use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
 fn home() -> String {
     std::env::var("HOME").unwrap_or_else(|_| "/home/orangepi".into())
+}
+
+fn pull_exam() {
+    let path = format!("{}/exam.seb", home());
+    let mut req = ureq::get("https://riscv-exam-computer.download/exam.seb");
+
+    // Hash of the file we already have. Server returns 304 if it matches.
+    if let Ok(local) = fs::read(&path) {
+        req = req.header("If-None-Match", format!("\"{:x}\"", Sha256::digest(&local)));
+    }
+    let Ok(resp) = req.call() else { return };
+
+    // 200 = new bytes. 304 / 404 / errors: keep whatever is on disk.
+    if resp.status() != 200 {
+        return;
+    }
+
+    // Write new .seb file to the disk.
+    let Ok(bytes) = resp.into_body().read_to_vec() else { return };
+    if fs::write(&path, &bytes).is_ok() {
+        println!("exam.seb updated {} bytes", bytes.len());
+    }
 }
 
 fn start_script() -> String {
@@ -63,6 +87,7 @@ fn main() {
     let mut seb = None;
 
     loop {
+        pull_exam();
         let state = if running(&mut seb) { "running" } else { "idle" };
         let body = format!(r#"{{"host":"{name}","state":"{state}"}}"#);
         println!("heartbeat host={name} state={state}");
