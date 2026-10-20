@@ -1,0 +1,5 @@
+# Leptos 0.8 encodes whole view trees in types. Without type erasure the
+# server library's debug build is several GB and can exhaust memory while
+# linking. Erasure trades a little runtime speed for far smaller builds.
+[build]
+rustflags = ["--cfg", "erase_components"]

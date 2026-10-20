@@ -1,10 +1,76 @@
 [package]
 name = "server"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
+[lib]
+# Not "server": on Windows the cdylib and the binary would overwrite each
+# other's .pdb/.lib files (cargo#6313).
+name = "exam_console"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+required-features = ["ssr"]
+
 [dependencies]
-axum = "0.8.9"
+proto = { path = "../proto" }
+leptos = { version = "0.8" }
+leptos_router = { version = "0.8" }
+leptos_meta = { version = "0.8" }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1.0.151"
-tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net"] }
+serde_json = "1"
+
+# ssr
+axum = { version = "0.8", optional = true, features = ["macros"] }
+leptos_axum = { version = "0.8", optional = true }
+tokio = { version = "1", optional = true, features = ["rt-multi-thread", "macros", "net", "time", "signal", "fs"] }
+tower-http = { version = "0.6", optional = true, features = ["fs", "set-header"] }
+rand = { version = "0.9", optional = true }
+sha2 = { version = "0.10", optional = true }
+subtle = { version = "2", optional = true }
+hex = { version = "0.4", optional = true }
+
+# hydrate
+console_error_panic_hook = { version = "0.1", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["Document", "HtmlDocument", "Window", "Element"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+server_fn = "0.8"
+
+[features]
+hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
+ssr = [
+  "dep:axum",
+  "dep:leptos_axum",
+  "dep:tokio",
+  "dep:tower-http",
+  "dep:rand",
+  "dep:sha2",
+  "dep:subtle",
+  "dep:hex",
+  "leptos/ssr",
+  "leptos/nonce",
+  "leptos_meta/ssr",
+  "leptos_router/ssr",
+]
+
+[package.metadata.leptos]
+output-name = "console"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+style-file = "style/main.css"
+assets-dir = "public"
+site-addr = "127.0.0.1:8000"
+reload-port = 3001
+bin-features = ["ssr"]
+bin-default-features = false
+lib-features = ["hydrate"]
+lib-default-features = false
+lib-profile-release = "wasm-release"
+env = "DEV"

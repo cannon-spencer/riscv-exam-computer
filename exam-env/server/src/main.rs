@@ -1,123 +1,56 @@
-use axum::{
-    extract::State,
-    routing::{get, post},
-    Json, Router,
-};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::{
-    collections::HashMap,
-    net::SocketAddr,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
+use std::net::SocketAddr;
+use std::sync::Arc;
 
-struct Machine {
-    last_seen: Instant,
-    state: String,
-    pending: Option<String>,
-}
-
-type Db = Arc<Mutex<HashMap<String, Machine>>>;
-
-const ONLINE: Duration = Duration::from_secs(15);
-
-#[derive(Deserialize)]
-struct Heartbeat {
-    host: String,
-    #[serde(default)]
-    state: String,
-}
-
-#[derive(Serialize)]
-struct MachineView {
-    host: String,
-    state: String,
-    pending: Option<String>,
-    seen_secs_ago: u64,
-}
+use exam_console::backend::{App, Config, Ctx, http, spawn_background};
 
 #[tokio::main]
 async fn main() {
-    let db: Db = Arc::new(Mutex::new(HashMap::new()));
-    let app = Router::new()
-        .route("/heartbeat", post(heartbeat))
-        .route("/machines", get(machines))
-        .route("/start", post(enqueue_start))
-        .route("/stop", post(enqueue_stop))
-        .with_state(db);
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    println!("listening on {addr}");
-    axum::serve(listener, app).await.unwrap();
-}
+    let conf = leptos::config::get_configuration(None).expect("leptos configuration");
+    let leptos = conf.leptos_options;
 
-async fn heartbeat(State(db): State<Db>, Json(hb): Json<Heartbeat>) -> Json<Value> {
-    let job = {
-        let mut map = db.lock().unwrap();
-        let m = map.entry(hb.host.clone()).or_insert(Machine {
-            last_seen: Instant::now(),
-            state: String::new(),
-            pending: None,
-        });
-        m.last_seen = Instant::now();
-        m.state.clone_from(&hb.state);
-        let take = match m.pending.as_deref() {
-            Some("start") if hb.state != "running" => true,
-            Some("stop") => true,
-            _ => false,
-        };
-        if take {
-            m.pending.take()
-        } else {
-            None
-        }
-    };
-    println!(
-        "heartbeat host={} state={} job={}",
-        hb.host,
-        hb.state,
-        job.as_deref().unwrap_or("-")
-    );
-    Json(json!({ "ok": true, "job": job }))
-}
-
-async fn machines(State(db): State<Db>) -> Json<Vec<MachineView>> {
-    let map = db.lock().unwrap();
-    let now = Instant::now();
-    let mut rows: Vec<_> = map
-        .iter()
-        .map(|(host, m)| MachineView {
-            host: host.clone(),
-            state: m.state.clone(),
-            pending: m.pending.clone(),
-            seen_secs_ago: now.saturating_duration_since(m.last_seen).as_secs(),
-        })
-        .collect();
-    rows.sort_by(|a, b| a.host.cmp(&b.host));
-    Json(rows)
-}
-
-async fn enqueue_start(State(db): State<Db>) -> Json<Value> {
-    Json(json!({ "ok": true, "queued": enqueue(&db, "start") }))
-}
-
-async fn enqueue_stop(State(db): State<Db>) -> Json<Value> {
-    Json(json!({ "ok": true, "queued": enqueue(&db, "stop") }))
-}
-
-fn enqueue(db: &Db, job: &str) -> Vec<String> {
-    let mut map = db.lock().unwrap();
-    let now = Instant::now();
-    let mut queued = Vec::new();
-    for (host, m) in map.iter_mut() {
-        if now.saturating_duration_since(m.last_seen) > ONLINE {
-            continue;
-        }
-        m.pending = Some(job.to_string());
-        queued.push(host.clone());
+    let (cfg, generated) = Config::from_env();
+    if generated {
+        println!("================================================================");
+        println!(" EXAM_ADMIN_PASSWORD is not set. Instructor password for this run:");
+        println!();
+        println!("     {}", cfg.admin_password);
+        println!();
+        println!(" Set EXAM_ADMIN_PASSWORD to keep it stable across restarts.");
+        println!("================================================================");
     }
-    queued.sort();
-    println!("{job} queued {:?}", queued);
-    queued
+    if cfg.agent_token.is_none() {
+        println!("WARNING: EXAM_AGENT_TOKEN is not set; any client can act as a board.");
+    }
+    if let Some(dir) = &cfg.data_dir {
+        println!("data: {}", dir.display());
+    }
+
+    let app = Arc::new(App::new(cfg).expect("open data directory"));
+    spawn_background(app.clone());
+
+    let addr = leptos.site_addr;
+    let router = http::router(Ctx { leptos, app: app.clone() });
+    let listener = tokio::net::TcpListener::bind(addr).await.expect("bind");
+    println!("listening on http://{addr}");
+    axum::serve(listener, router.into_make_service_with_connect_info::<SocketAddr>())
+        .with_graceful_shutdown(shutdown())
+        .await
+        .expect("serve");
+
+    app.save(true);
+    println!("state saved, bye");
+}
+
+async fn shutdown() {
+    let ctrl_c = async { tokio::signal::ctrl_c().await.expect("ctrl-c handler") };
+    #[cfg(unix)]
+    let term = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("SIGTERM handler")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let term = std::future::pending::<()>();
+    tokio::select! { _ = ctrl_c => {}, _ = term => {} }
 }
