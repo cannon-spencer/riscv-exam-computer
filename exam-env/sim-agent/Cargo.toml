@@ -1,0 +1,10 @@
+[package]
+name = "sim-agent"
+version = "0.2.0"
+edition = "2024"
+description = "Simulates N exam boards against the exam server, for UI work and demos"
+
+[dependencies]
+proto = { path = "../proto" }
+serde_json = "1"
+ureq = "3"
