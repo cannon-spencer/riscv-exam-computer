@@ -23,7 +23,7 @@ Gets SEB rendering on the PowerVR BXE-4-32 GPU, inside a cage kiosk at 1280x720.
 
 ## SEB
 Check `patches/seb-linux-base.txt` for the commit. Then:
-`cd ~/seb-linux && git apply <repo>/patches/seb-linux-gpu.patch && ./scripts/build.sh CONFIG+=force_webkitgtk`
+`cd ~/seb-linux && git apply <repo>/platform/orangepi-gpu/patches/seb-linux-gpu.patch && ./scripts/build.sh CONFIG+=force_webkitgtk`
 
 ## Run
 - Local / UART / daemon: `sudo ~/seb-remote.sh 'seb://<host>:8000/<file>.seb'`
