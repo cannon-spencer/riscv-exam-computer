@@ -1,0 +1,13 @@
+--- a/render/gles2/renderer.c
++++ b/render/gles2/renderer.c
+@@ -750,7 +750,9 @@
+ 		free(renderer);
+ 		return NULL;
+ 	}
+-	if (!check_gl_ext(exts_str, "GL_EXT_unpack_subimage")) {
++	int gles_major = 0;
++	sscanf((const char *)glGetString(GL_VERSION), "OpenGL ES %d", &gles_major);
++	if (!check_gl_ext(exts_str, "GL_EXT_unpack_subimage") && gles_major < 3) {
+ 		wlr_log(WLR_ERROR, "GL_EXT_unpack_subimage not supported");
+ 		free(renderer);
+ 		return NULL;
