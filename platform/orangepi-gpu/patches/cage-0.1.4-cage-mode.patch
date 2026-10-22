@@ -1,0 +1,35 @@
+--- a/output.c
++++ b/output.c
+@@ -41,6 +41,23 @@
+ #include "xwayland.h"
+ #endif
+ 
++
++#include <stdio.h>
++#include <stdlib.h>
++static struct wlr_output_mode *cage_pick_mode(struct wlr_output *o) {
++	const char *want = getenv("CAGE_MODE");
++	int w = 0, h = 0;
++	if (want && sscanf(want, "%dx%d", &w, &h) == 2) {
++		struct wlr_output_mode *m, *best = NULL;
++		wl_list_for_each(m, &o->modes, link) {
++			if (m->width == w && m->height == h && (!best || m->refresh > best->refresh))
++				best = m;
++		}
++		if (best) return best;
++	}
++	return wlr_output_preferred_mode(o);
++}
++
+ static void output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data);
+ 
+ struct surface_iterator_data {
+@@ -469,7 +486,7 @@
+ 	output->damage_destroy.notify = handle_output_damage_destroy;
+ 	wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
+ 
+-	struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
++	struct wlr_output_mode *preferred_mode = cage_pick_mode(wlr_output);
+ 	if (preferred_mode) {
+ 		wlr_output_set_mode(wlr_output, preferred_mode);
+ 	}

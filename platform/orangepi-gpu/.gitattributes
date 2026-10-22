@@ -1,0 +1,4 @@
+*.sh text eol=lf
+*.patch -text
+*.md text eol=lf
+*.txt text eol=lf
