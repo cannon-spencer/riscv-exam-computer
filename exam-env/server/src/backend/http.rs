@@ -31,7 +31,8 @@ pub fn router(ctx: Ctx) -> Router {
         .route("/auth/logout", post(logout))
         .route("/machines", get(machines))
         .route("/gate/{id}", get(gate))
-        .route("/exams/{id}/exam.seb", get(download_seb))
+        .route("/gate/{id}/verify", post(gate_verify).layer(DefaultBodyLimit::max(8 * 1024)))
+        .route("/exams/{id}/exam.seb", get(download_seb).post(download_seb_locked).layer(DefaultBodyLimit::max(4 * 1024)))
         .leptos_routes(&ctx, routes, move || shell(shell_opts.clone()))
         .fallback(leptos_axum::file_and_error_handler::<Ctx, _>(shell))
         .layer(middleware::from_fn_with_state(ctx.clone(), guard))
@@ -145,73 +146,141 @@ fn gate_page(status: StatusCode, title: &str, body: &str) -> Response {
     res
 }
 
-/// Start page of gated exams. SEB opens it with
-/// `X-SafeExamBrowser-ConfigKeyHash = sha256(this URL + config key)`; only a
-/// browser running this exam's .seb can produce that. On success the page
-/// shows the Canvas access code (or redirects if the exam has none).
-async fn gate(State(ctx): State<Ctx>, Path(id): Path<String>, req: Request) -> Response {
-    let (build, spec, name, public) = {
-        let fleet = ctx.app.fleet.lock().unwrap();
-        let Some(exam) = fleet.exam(&id) else {
-            return gate_page(StatusCode::NOT_FOUND, "Exam not found", "<p class=\"muted\">This exam no longer exists. Ask your instructor.</p>");
-        };
-        let Some(public) = fleet.public_url().map(str::to_owned) else {
-            return gate_page(StatusCode::SERVICE_UNAVAILABLE, "Gate is off", "<p class=\"muted\">EXAM_PUBLIC_URL is not set on the exam server.</p>");
-        };
-        match fleet.seb_build(exam) {
-            Ok(b) => (b, exam.spec.clone(), exam.name.clone(), public),
-            Err(e) => return gate_page(StatusCode::INTERNAL_SERVER_ERROR, "Exam is misconfigured", &format!("<p class=\"muted\">{}</p>", html_escape(&e))),
-        }
+struct GateExam {
+    config_key: String,
+    spec: proto::seb::ExamSpec,
+    name: String,
+    public: String,
+}
+
+fn gate_exam(ctx: &Ctx, id: &str) -> Result<GateExam, Response> {
+    let fleet = ctx.app.fleet.lock().unwrap();
+    let Some(exam) = fleet.exam(id) else {
+        return Err(gate_page(StatusCode::NOT_FOUND, "Exam not found", "<p class=\"muted\">This exam no longer exists. Ask your instructor.</p>"));
     };
-
-    // The absolute URL SEB requested: our public base plus path and query.
-    let pq = req.uri().path_and_query().map_or("/", |p| p.as_str());
-    let url = format!("{public}{pq}");
-    let received = req.headers().get(CONFIG_KEY_HEADER).and_then(|v| v.to_str().ok());
-    let ok = received.is_some_and(|h| proto::seb_file::verify_config_key_hash(&url, &build.config_key, h));
-
-    if !ok {
-        let why = if received.is_some() { "wrong Config Key" } else { "no Config Key header" };
-        ctx.app.fleet.lock().unwrap().log(
-            wall_ms(), crate::model::Actor::System, crate::model::Level::Warn, None,
-            format!("Gate refused for {name}: {why}"));
-        return gate_page(
-            StatusCode::FORBIDDEN,
-            "Open this exam on an exam board",
-            "<p>This page only works inside Safe Exam Browser started from the exam console.</p>\
-             <p class=\"muted\">If you are on an exam board, ask your instructor to restart it.</p>",
-        );
+    let Some(public) = fleet.public_url().map(str::to_owned) else {
+        return Err(gate_page(StatusCode::SERVICE_UNAVAILABLE, "Gate is off", "<p class=\"muted\">EXAM_PUBLIC_URL is not set on the exam server.</p>"));
+    };
+    match fleet.seb_build(exam) {
+        Ok(b) => Ok(GateExam { config_key: b.config_key, spec: exam.spec.clone(), name: exam.name.clone(), public }),
+        Err(e) => Err(gate_page(StatusCode::INTERNAL_SERVER_ERROR, "Exam is misconfigured", &format!("<p class=\"muted\">{}</p>", html_escape(&e)))),
     }
+}
 
-    println!("gate ok for exam {id} ({url})");
-    if spec.access_code.is_empty() {
-        return Redirect::to(&spec.start_url).into_response();
+fn gate_refused(ctx: &Ctx, exam: &GateExam, why: &str) -> Response {
+    ctx.app.fleet.lock().unwrap().log(
+        wall_ms(), crate::model::Actor::System, crate::model::Level::Warn, None,
+        format!("Gate refused for {}: {why}", exam.name));
+    gate_page(
+        StatusCode::FORBIDDEN,
+        "Open this exam on an exam board",
+        "<p>This page only works inside Safe Exam Browser started from the exam console.</p>\
+         <p class=\"muted\">If you are on an exam board, ask your instructor to restart it.</p>",
+    )
+}
+
+fn gate_passed(id: &str, exam: &GateExam, url: &str, via: &str) -> Response {
+    println!("gate ok for exam {id} via {via} ({url})");
+    if exam.spec.access_code.is_empty() {
+        return Redirect::to(&exam.spec.start_url).into_response();
     }
     gate_page(
         StatusCode::OK,
-        &name,
+        &exam.name,
         &format!(
             "<p>Exam board verified. Enter this access code when Canvas asks for it:</p>\
              <p class=\"code\">{code}</p><p><a class=\"btn\" href=\"{href}\">Continue to the exam</a></p>",
-            code = html_escape(&spec.access_code),
-            href = html_escape(&spec.start_url),
+            code = html_escape(&exam.spec.access_code),
+            href = html_escape(&exam.spec.start_url),
         ),
     )
 }
 
-/// The exam's .seb for instructors (behind the session guard). Opens in
-/// official SEB too, which is handy for testing the gate on a laptop.
-async fn download_seb(State(ctx): State<Ctx>, Path(id): Path<String>) -> Response {
-    let fleet = ctx.app.fleet.lock().unwrap();
-    let Some(exam) = fleet.exam(&id) else { return (StatusCode::NOT_FOUND, "Unknown exam").into_response() };
-    let build = match fleet.seb_build(exam) {
-        Ok(b) => b,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+/// Start page of gated exams. SEB opens it with
+/// `X-SafeExamBrowser-ConfigKeyHash = sha256(this URL + config key)`; only a
+/// browser running this exam's .seb can produce that. On success the page
+/// shows the Canvas access code (or redirects if the exam has none).
+///
+/// SEB versions that only offer the JavaScript API (SEB 3.x on macOS/iOS
+/// with the modern WebView) send no header. For those the gate serves a
+/// small page that reads `SafeExamBrowser.security.configKey` and posts it
+/// to `/gate/<id>/verify`, which runs the same check.
+async fn gate(State(ctx): State<Ctx>, Path(id): Path<String>, req: Request) -> Response {
+    let exam = match gate_exam(&ctx, &id) {
+        Ok(e) => e,
+        Err(res) => return res,
     };
-    let slug: String = exam.name.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
+    // The absolute URL SEB requested: our public base plus path and query.
+    let pq = req.uri().path_and_query().map_or("/", |p| p.as_str());
+    let url = format!("{}{pq}", exam.public);
+    match req.headers().get(CONFIG_KEY_HEADER).and_then(|v| v.to_str().ok()) {
+        Some(h) if proto::seb_file::verify_config_key_hash(&url, &exam.config_key, h) => gate_passed(&id, &exam, &url, "header"),
+        Some(_) => gate_refused(&ctx, &exam, "wrong Config Key"),
+        None => gate_js_page(&id),
+    }
+}
+
+/// Page for SEB clients that expose the keys only to JavaScript.
+fn gate_js_page(id: &str) -> Response {
+    let nonce = auth::random_hex(16);
+    let html = format!(
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Checking exam board</title>\
+         <style>body{{font:17px/1.5 system-ui,sans-serif;background:#0b0b0d;color:#f5f5f7;display:grid;place-items:center;min-height:100vh;margin:0}}\
+         main{{max-width:34rem;padding:2rem;background:#1c1c20;border-radius:20px}}</style></head><body><main>\
+         <h1>Checking exam board…</h1><p id=\"m\">One moment.</p>\
+         <noscript><p>This page only works inside Safe Exam Browser started from the exam console.</p></noscript>\
+         <form id=\"f\" method=\"post\" action=\"/gate/{id}/verify\"><input type=\"hidden\" name=\"url\"><input type=\"hidden\" name=\"ck\"></form>\
+         <script nonce=\"{nonce}\">(function(){{\
+         var f=document.getElementById('f');\
+         function sec(){{return window.SafeExamBrowser&&window.SafeExamBrowser.security;}}\
+         function go(){{var s=sec();if(!s||!s.configKey){{document.getElementById('m').textContent=\
+         'This page only works inside Safe Exam Browser started from the exam console.';return;}}\
+         f.elements.url.value=location.href;f.elements.ck.value=s.configKey;f.submit();}}\
+         var s=sec();if(s&&typeof s.updateKeys==='function'){{s.updateKeys(go);}}else{{go();}}\
+         }})();</script></main></body></html>",
+        id = html_escape(id),
+    );
+    let mut res = (StatusCode::OK, [(header::CONTENT_TYPE, "text/html; charset=utf-8")], html).into_response();
+    let csp = format!(
+        "default-src 'none'; script-src 'nonce-{nonce}'; style-src 'unsafe-inline'; \
+         form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+    );
+    res.headers_mut().insert(header::CONTENT_SECURITY_POLICY, HeaderValue::from_str(&csp).unwrap());
+    res
+}
+
+#[derive(Deserialize)]
+struct GateVerifyForm {
+    url: String,
+    ck: String,
+}
+
+/// Second half of the JavaScript path: the page's URL and the configKey
+/// value SEB computed for it. The URL must be this exam's gate URL, so a
+/// hash captured from another page cannot be replayed here.
+async fn gate_verify(State(ctx): State<Ctx>, Path(id): Path<String>, Form(form): Form<GateVerifyForm>) -> Response {
+    let exam = match gate_exam(&ctx, &id) {
+        Ok(e) => e,
+        Err(res) => return res,
+    };
+    let url = form.url.split('#').next().unwrap_or("").to_string();
+    let base = format!("{}/gate/{id}", exam.public);
+    let rest = url.strip_prefix(&base);
+    if !matches!(rest, Some(r) if r.is_empty() || r.starts_with('?')) {
+        return gate_refused(&ctx, &exam, "JS check for a different page");
+    }
+    if !proto::seb_file::verify_config_key_hash(&url, &exam.config_key, &form.ck) {
+        return gate_refused(&ctx, &exam, "wrong Config Key (JS API)");
+    }
+    gate_passed(&id, &exam, &url, "js")
+}
+
+fn seb_response(name: &str, build: &super::fleet::SebBuild, password: Option<&str>) -> Response {
+    let slug: String = name.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
     let slug = slug.split('-').filter(|s| !s.is_empty()).collect::<Vec<_>>().join("-");
     let disposition = format!("attachment; filename=\"{}.seb\"", if slug.is_empty() { "exam" } else { &slug });
-    let bytes = proto::seb_file::container::encode(&build.xml, None);
+    let bytes = proto::seb_file::container::encode(&build.xml, password);
     let mut res = (StatusCode::OK, bytes).into_response();
     let h = res.headers_mut();
     h.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/seb"));
@@ -220,6 +289,37 @@ async fn download_seb(State(ctx): State<Ctx>, Path(id): Path<String>) -> Respons
     }
     h.insert("x-seb-config-key", HeaderValue::from_str(&build.config_key).unwrap());
     res
+}
+
+/// The exam's .seb for instructors (behind the session guard). Opens in
+/// official SEB too, which is handy for testing the gate on a laptop.
+async fn download_seb(State(ctx): State<Ctx>, Path(id): Path<String>) -> Response {
+    let fleet = ctx.app.fleet.lock().unwrap();
+    let Some(exam) = fleet.exam(&id) else { return (StatusCode::NOT_FOUND, "Unknown exam").into_response() };
+    match fleet.seb_build(exam) {
+        Ok(b) => seb_response(&exam.name, &b, None),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct DownloadForm {
+    password: String,
+}
+
+/// Same file, password-encrypted ("pswd"), for handing to students who use
+/// official SEB on their own machines. Boards always get the plain file:
+/// they start SEB unattended and could not type a password.
+async fn download_seb_locked(State(ctx): State<Ctx>, Path(id): Path<String>, Form(form): Form<DownloadForm>) -> Response {
+    if form.password.chars().count() < 4 || form.password.chars().count() > 128 {
+        return (StatusCode::BAD_REQUEST, "Use a password of 4 to 128 characters").into_response();
+    }
+    let fleet = ctx.app.fleet.lock().unwrap();
+    let Some(exam) = fleet.exam(&id) else { return (StatusCode::NOT_FOUND, "Unknown exam").into_response() };
+    match fleet.seb_build(exam) {
+        Ok(b) => seb_response(&exam.name, &b, Some(&form.password)),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
 }
 
 // ----- instructor login -------------------------------------------------------
