@@ -31,6 +31,7 @@ rand = { version = "0.9", optional = true }
 sha2 = { version = "0.10", optional = true }
 subtle = { version = "2", optional = true }
 hex = { version = "0.4", optional = true }
+base64 = { version = "0.22", optional = true }
 
 # hydrate
 console_error_panic_hook = { version = "0.1", optional = true }
@@ -54,6 +55,8 @@ ssr = [
   "dep:sha2",
   "dep:subtle",
   "dep:hex",
+  "dep:base64",
+  "proto/container",
   "leptos/ssr",
   "leptos/nonce",
   "leptos_meta/ssr",

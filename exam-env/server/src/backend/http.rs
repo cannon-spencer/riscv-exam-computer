@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 use std::time::Instant;
 
 use axum::body::{Body, Bytes};
-use axum::extract::{ConnectInfo, DefaultBodyLimit, FromRequest, Request, State};
+use axum::extract::{ConnectInfo, DefaultBodyLimit, FromRequest, Path, Request, State};
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Redirect, Response};
@@ -28,6 +28,8 @@ pub fn router(ctx: Ctx) -> Router {
         .route("/auth/login", post(login).layer(DefaultBodyLimit::max(4 * 1024)))
         .route("/auth/logout", post(logout))
         .route("/machines", get(machines))
+        .route("/gate/{id}", get(gate))
+        .route("/exams/{id}/exam.seb", get(download_seb))
         .leptos_routes(&ctx, routes, move || shell(shell_opts.clone()))
         .fallback(leptos_axum::file_and_error_handler::<Ctx, _>(shell))
         .layer(middleware::from_fn_with_state(ctx.clone(), guard))
@@ -67,6 +69,122 @@ async fn heartbeat(State(ctx): State<Ctx>, headers: HeaderMap, body: Bytes) -> R
 /// JSON fleet listing for scripts (`curl -b exam_session=...`).
 async fn machines(State(ctx): State<Ctx>) -> Response {
     Json(ctx.app.fleet.lock().unwrap().view(Instant::now()).boards).into_response()
+}
+
+// ----- SEB gate ---------------------------------------------------------------
+
+/// Header SEB adds when `sendBrowserExamKey` is on.
+const CONFIG_KEY_HEADER: &str = "x-safeexambrowser-configkeyhash";
+
+fn html_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+fn gate_page(status: StatusCode, title: &str, body: &str) -> Response {
+    let html = format!(
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
+         <title>{t}</title><style>\
+         body{{font:17px/1.5 system-ui,sans-serif;background:#0b0b0d;color:#f5f5f7;display:grid;place-items:center;min-height:100vh;margin:0}}\
+         main{{max-width:34rem;padding:2rem;background:#1c1c20;border-radius:20px}}\
+         h1{{font-size:1.5rem;margin:0 0 .5rem}} .code{{font:600 2rem ui-monospace,monospace;letter-spacing:.1em;margin:1rem 0}}\
+         a.btn{{display:inline-block;background:#f5f5f7;color:#0b0b0d;padding:.6rem 1.2rem;border-radius:999px;text-decoration:none;font-weight:600}}\
+         .muted{{color:#a1a1a6}}</style></head><body><main><h1>{t}</h1>{body}</main></body></html>",
+        t = html_escape(title),
+    );
+    let mut res = (status, [(header::CONTENT_TYPE, "text/html; charset=utf-8")], html).into_response();
+    res.headers_mut().insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static("default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"),
+    );
+    res
+}
+
+/// Start page of gated exams. SEB opens it with
+/// `X-SafeExamBrowser-ConfigKeyHash = sha256(this URL + config key)`; only a
+/// browser running this exam's .seb can produce that. On success the page
+/// shows the Canvas access code (or redirects if the exam has none).
+async fn gate(State(ctx): State<Ctx>, Path(id): Path<String>, req: Request) -> Response {
+    let (build, spec, name, public) = {
+        let fleet = ctx.app.fleet.lock().unwrap();
+        let Some(exam) = fleet.exam(&id) else {
+            return gate_page(StatusCode::NOT_FOUND, "Exam not found", "<p class=\"muted\">This exam no longer exists. Ask your instructor.</p>");
+        };
+        let Some(public) = fleet.public_url().map(str::to_owned) else {
+            return gate_page(StatusCode::SERVICE_UNAVAILABLE, "Gate is off", "<p class=\"muted\">EXAM_PUBLIC_URL is not set on the exam server.</p>");
+        };
+        match fleet.seb_build(exam) {
+            Ok(b) => (b, exam.spec.clone(), exam.name.clone(), public),
+            Err(e) => return gate_page(StatusCode::INTERNAL_SERVER_ERROR, "Exam is misconfigured", &format!("<p class=\"muted\">{}</p>", html_escape(&e))),
+        }
+    };
+
+    // The absolute URL SEB requested: our public base plus path and query.
+    let pq = req.uri().path_and_query().map_or("/", |p| p.as_str());
+    let url = format!("{public}{pq}");
+    let received = req.headers().get(CONFIG_KEY_HEADER).and_then(|v| v.to_str().ok());
+    let ok = received.is_some_and(|h| proto::seb_file::verify_config_key_hash(&url, &build.config_key, h));
+
+    if !ok {
+        let why = if received.is_some() { "wrong Config Key" } else { "no Config Key header" };
+        ctx.app.fleet.lock().unwrap().log(
+            wall_ms(), crate::model::Actor::System, crate::model::Level::Warn, None,
+            format!("Gate refused for {name}: {why}"));
+        return gate_page(
+            StatusCode::FORBIDDEN,
+            "Open this exam on an exam board",
+            "<p>This page only works inside Safe Exam Browser started from the exam console.</p>\
+             <p class=\"muted\">If you are on an exam board, ask your instructor to restart it.</p>",
+        );
+    }
+
+    if spec.access_code.is_empty() {
+        return Redirect::to(&spec.start_url).into_response();
+    }
+    gate_page(
+        StatusCode::OK,
+        &name,
+        &format!(
+            "<p>Exam board verified. Enter this access code when Canvas asks for it:</p>\
+             <p class=\"code\">{code}</p><p><a class=\"btn\" href=\"{href}\">Continue to the exam</a></p>",
+            code = html_escape(&spec.access_code),
+            href = html_escape(&spec.start_url),
+        ),
+    )
+}
+
+/// The exam's .seb for instructors (behind the session guard). Opens in
+/// official SEB too, which is handy for testing the gate on a laptop.
+async fn download_seb(State(ctx): State<Ctx>, Path(id): Path<String>) -> Response {
+    let fleet = ctx.app.fleet.lock().unwrap();
+    let Some(exam) = fleet.exam(&id) else { return (StatusCode::NOT_FOUND, "Unknown exam").into_response() };
+    let build = match fleet.seb_build(exam) {
+        Ok(b) => b,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    };
+    let slug: String = exam.name.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
+    let slug = slug.split('-').filter(|s| !s.is_empty()).collect::<Vec<_>>().join("-");
+    let disposition = format!("attachment; filename=\"{}.seb\"", if slug.is_empty() { "exam" } else { &slug });
+    let bytes = proto::seb_file::container::encode(&build.xml, None);
+    let mut res = (StatusCode::OK, bytes).into_response();
+    let h = res.headers_mut();
+    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/seb"));
+    if let Ok(v) = HeaderValue::from_str(&disposition) {
+        h.insert(header::CONTENT_DISPOSITION, v);
+    }
+    h.insert("x-seb-config-key", HeaderValue::from_str(&build.config_key).unwrap());
+    res
 }
 
 // ----- instructor login -------------------------------------------------------
@@ -152,6 +270,7 @@ fn session_token(headers: &HeaderMap) -> Option<&str> {
 
 fn is_public(path: &str) -> bool {
     matches!(path, "/heartbeat" | "/healthz" | "/login" | "/auth/login" | "/favicon.svg")
+        || path.starts_with("/gate/")
         || path.starts_with("/pkg/")
         || path.starts_with("/fonts/")
 }

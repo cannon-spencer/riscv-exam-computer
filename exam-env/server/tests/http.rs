@@ -25,6 +25,7 @@ fn setup(agent_token: Option<&str>) -> (Router, Arc<App>) {
             max_boards: 10,
             allowed_origins: vec![],
             cookie_secure: CookieSecure::Never,
+            public_url: Some("https://exam.test".into()),
         })
         .unwrap(),
     );
@@ -76,7 +77,7 @@ async fn old_agent_heartbeat_and_job_shape_are_unchanged() {
     {
         let mut f = app.fleet.lock().unwrap();
         let id = f
-            .create_exam("e1".into(), "Quiz", proto::seb::ExamSpec { start_url: "https://ufl.instructure.com/q".into(), allowed_domains: vec![], allow_quit: false }, wall_ms())
+            .create_exam("e1".into(), "Quiz", proto::seb::ExamSpec { start_url: "https://ufl.instructure.com/q".into(), allowed_domains: vec![], allow_quit: false, access_code: "TIGER42".into() }, wall_ms())
             .unwrap();
         let r = f.enqueue(&["orangepirv".into()], proto::JobKind::Start, Some(&id), Instant::now(), wall_ms()).unwrap();
         assert_eq!(r.queued, vec!["orangepirv"]);
@@ -223,4 +224,90 @@ async fn server_functions_work_with_a_session() {
     let (s, _, body) = send(&router, req).await;
     assert_eq!(s, StatusCode::OK, "{body}");
     assert!(body.contains(r#""host":"b1""#), "{body}");
+}
+
+#[tokio::test]
+async fn start_job_carries_seb_and_gate_checks_config_key() {
+    use base64::Engine;
+    let (router, app) = setup(None);
+    send(&router, heartbeat(r#"{"host":"b1","state":"idle","protocol":3}"#, None)).await;
+    let spec = proto::seb::ExamSpec {
+        start_url: "https://ufl.instructure.com/courses/1/quizzes/2".into(),
+        allowed_domains: vec!["ufl.edu".into()],
+        allow_quit: false,
+        access_code: "TIGER42".into(),
+    };
+    {
+        let mut f = app.fleet.lock().unwrap();
+        f.create_exam("e1".into(), "Quiz <1>", spec, wall_ms()).unwrap();
+        f.enqueue(&["b1".into()], proto::JobKind::Start, Some("e1"), Instant::now(), wall_ms()).unwrap();
+    }
+    let (_, _, body) = send(&router, heartbeat(r#"{"host":"b1","state":"idle","protocol":3}"#, None)).await;
+    let reply: proto::HeartbeatReply = serde_json::from_str(&body).unwrap();
+    let exam = reply.exam.unwrap();
+    let ck = exam.config_key.unwrap();
+
+    // The .seb the board gets opens, starts at the gate, and has that key.
+    let bytes = base64::engine::general_purpose::STANDARD.decode(exam.seb.unwrap()).unwrap();
+    let xml = proto::seb_file::container::decode(&bytes, None).unwrap();
+    let settings = proto::seb_file::from_xml(&xml).unwrap();
+    assert_eq!(settings["startURL"].as_string(), Some("https://exam.test/gate/e1"));
+    assert_eq!(settings["sendBrowserExamKey"].as_boolean(), Some(true));
+    assert_eq!(proto::seb_file::config_key(&settings), ck);
+
+    let gate = |hash: Option<String>| {
+        let mut b = Request::get("/gate/e1").header(header::HOST, HOST);
+        if let Some(h) = hash {
+            b = b.header("X-SafeExamBrowser-ConfigKeyHash", h);
+        }
+        b.body(Body::empty()).unwrap()
+    };
+    let (s, _, body) = send(&router, gate(None)).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    assert!(!body.contains("TIGER42"));
+    let wrong = proto::seb_file::config_key_hash("https://exam.test/gate/e2", &ck);
+    let (s, _, _) = send(&router, gate(Some(wrong))).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    let right = proto::seb_file::config_key_hash("https://exam.test/gate/e1", &ck);
+    let (s, headers, body) = send(&router, gate(Some(right))).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(body.contains("TIGER42"), "{body}");
+    assert!(body.contains("Quiz &lt;1&gt;"), "names are escaped");
+    assert!(headers.get(header::CONTENT_SECURITY_POLICY).unwrap().to_str().unwrap().contains("default-src 'none'"));
+
+    // .seb download is for signed-in instructors only.
+    let dl = |cookie: Option<&str>| {
+        let mut b = Request::get("/exams/e1/exam.seb").header(header::HOST, HOST);
+        if let Some(c) = cookie {
+            b = b.header(header::COOKIE, c);
+        }
+        b.body(Body::empty()).unwrap()
+    };
+    let (s, _, _) = send(&router, dl(None)).await;
+    assert_eq!(s, StatusCode::SEE_OTHER);
+    let cookie = session(&router).await;
+    let (s, headers, _) = send(&router, dl(Some(&cookie))).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(headers.get("x-seb-config-key").unwrap(), ck.as_str());
+    assert!(headers.get(header::CONTENT_DISPOSITION).unwrap().to_str().unwrap().contains("quiz-1.seb"));
+}
+
+#[tokio::test]
+async fn gate_without_access_code_redirects_to_canvas() {
+    let (router, app) = setup(None);
+    let spec = proto::seb::ExamSpec { start_url: "https://ufl.instructure.com/q".into(), ..Default::default() };
+    let ck = {
+        let mut f = app.fleet.lock().unwrap();
+        f.create_exam("e9".into(), "Open", spec, wall_ms()).unwrap();
+        let e = f.exam("e9").unwrap().clone();
+        f.seb_build(&e).unwrap().config_key
+    };
+    let req = Request::get("/gate/e9?x=1")
+        .header(header::HOST, HOST)
+        .header("X-SafeExamBrowser-ConfigKeyHash", proto::seb_file::config_key_hash("https://exam.test/gate/e9?x=1", &ck))
+        .body(Body::empty())
+        .unwrap();
+    let (s, headers, _) = send(&router, req).await;
+    assert_eq!(s, StatusCode::SEE_OTHER);
+    assert_eq!(headers.get(header::LOCATION).unwrap(), "https://ufl.instructure.com/q");
 }
