@@ -7,5 +7,5 @@ exec /usr/bin/xinit /bin/sh -c '
     WEBKIT_DISABLE_COMPOSITING_MODE=1 \
     GDK_BACKEND=x11 \
     QT_QPA_PLATFORM=xcb \
-    /home/orangepi/safe-exam-browser --windowed /home/orangepi/demo-exam.json
+    /home/orangepi/safe-exam-browser --windowed /home/orangepi/exam.seb
 ' -- :1 vt3
