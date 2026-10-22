@@ -1,10 +1,10 @@
 #!/bin/bash
 # Builds WebKitGTK 2.38.2 (API 4.1) with OpenGL ES. ~11.5 h on JH7110.
 # Needs ~30 GB free disk and >= 8 GB swap (see system/setup-system.sh). Run inside tmux.
-set -e
+set -eo pipefail
 echo 'deb-src [check-valid-until=no] https://snapshot.debian.org/archive/debian/20221225T084846Z unstable main' \
   | sudo tee /etc/apt/sources.list.d/webkit-src.list
-sudo apt update || true
+sudo apt update
 sudo apt install -y dpkg-dev cmake ninja-build libgles-dev libegl-dev
 mkdir -p ~/build && cd ~/build
 [ -d webkit2gtk-2.38.2 ] || apt source webkit2gtk=2.38.2-1

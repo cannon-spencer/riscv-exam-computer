@@ -17,9 +17,9 @@ This does not make exams fast. The JH7110 main thread is still the limit. What t
 1. Download `seb-gpu-orangepi-rv.tar.gz` and the `.sha256` from the `gpu-stack-v1` release.
 2. `sha256sum -c seb-gpu-orangepi-rv.tar.gz.sha256`
 3. `tar xzf seb-gpu-orangepi-rv.tar.gz && cd seb-gpu-orangepi-rv && ./install.sh`
-4. Build SEB from [seb-linux#1](https://github.com/cannon-spencer/seb-linux/pull/1) (`17d0f2b`, branch `orangepi-cage-env`) with `CONFIG+=force_webkitgtk`.
+4. Build SEB from seb-linux `main` at `f6decb6` ([seb-linux#1](https://github.com/cannon-spencer/seb-linux/pull/1), merged) with `CONFIG+=force_webkitgtk`.
 5. `sudo install -m 755 build/bin/safe-exam-browser /usr/local/bin/safe-exam-browser`
-6. From this folder, `system/setup-system.sh`. That installs `seb-launch.sh` and `seb-remote.sh` to `/usr/local/bin` and allows `orangepi` to run `seb-remote.sh` as root. The 8 GB swap it creates is only for a from-source WebKit build.
+6. From this folder, `system/setup-system.sh`. That installs `seb-launch.sh` and `seb-remote.sh` to `/usr/local/bin` and allows `orangepi` to run `seb-remote.sh` as root.
 7. `sudo seb-remote.sh 'seb://<host>:8000/<file>.seb'`
 
 Stop: `sudo systemctl stop seb-kiosk; sudo chvt 2`
@@ -30,7 +30,7 @@ Stop: `sudo systemctl stop seb-kiosk; sudo chvt 2`
 
 Run these only to cut a new release tarball. A lab board installs the release above.
 
-1. `system/setup-system.sh` for the swap file.
+1. `system/setup-system.sh --swap` for the 8 GB swap file. The swap is only for this compile.
 2. `build/build-webkit-gles.sh` (about 11.5 h, run it in tmux), then `build/install-webkit-gles.sh`.
 3. `build/build-wlroots-cage.sh`.
 4. `bundle/make-bundle.sh`.

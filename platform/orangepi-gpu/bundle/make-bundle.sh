@@ -14,7 +14,9 @@ cd "$(dirname "$0")"
 TS=$(date +%Y%m%d-%H%M%S)
 echo "Backing up files this will overwrite -> ~/seb-gpu-backup-$TS.tgz"
 (cd root && find . -type f -o -type l) | sed 's#^\./#/#' | while read f; do [ -e "$f" ] && echo "$f"; done > /tmp/seb-gpu-overwrite.list
-sudo tar czf ~/seb-gpu-backup-$TS.tgz -T /tmp/seb-gpu-overwrite.list 2>/dev/null || true
+if [ -s /tmp/seb-gpu-overwrite.list ]; then
+  sudo tar czf ~/seb-gpu-backup-$TS.tgz -T /tmp/seb-gpu-overwrite.list
+fi
 sudo cp -a root/. /
 sudo ldconfig
 sudo apt-mark hold libwebkit2gtk-4.1-0 libjavascriptcoregtk-4.1-0 libwlroots10 cage >/dev/null 2>&1 || true
