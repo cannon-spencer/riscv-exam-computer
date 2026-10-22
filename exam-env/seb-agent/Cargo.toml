@@ -1,9 +1,10 @@
 [package]
 name = "seb-agent"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
+proto = { path = "../proto" }
 ureq = "3.4.0"
 serde_json = "1.0.151"
-sha2 = "0.10"
+base64 = "0.22"
