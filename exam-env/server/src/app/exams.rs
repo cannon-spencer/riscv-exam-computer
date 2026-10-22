@@ -279,6 +279,17 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
                             </details>
                             <div class="exam-card-actions">
                                 <a class="btn ghost small" href=format!("/exams/{}/exam.seb", e.id)>"Download .seb"</a>
+                                <details class="seb-locked">
+                                    <summary class="btn ghost small">"With password…"</summary>
+                                    <form class="form inline" method="post" action=format!("/exams/{}/exam.seb", e.id)>
+                                        <label class="field">
+                                            <span class="field-label">"Password students type to open it"</span>
+                                            <input type="password" name="password" required minlength="4" maxlength="128" autocomplete="new-password"/>
+                                            <span class="field-hint">"For official SEB on student laptops. Boards always get the unlocked file."</span>
+                                        </label>
+                                        <button type="submit" class="btn secondary small">"Download locked .seb"</button>
+                                    </form>
+                                </details>
                                 <a class="btn ghost small" download=file_name(&e.name) href=data_url(&e.config_json)>"Download JSON"</a>
                                 <ConfirmButton label="Delete" confirm="Click again to delete" icon=Icon::Trash class="btn danger small"
                                     on_confirm={

@@ -262,9 +262,13 @@ async fn start_job_carries_seb_and_gate_checks_config_key() {
         }
         b.body(Body::empty()).unwrap()
     };
-    let (s, _, body) = send(&router, gate(None)).await;
-    assert_eq!(s, StatusCode::FORBIDDEN);
-    assert!(!body.contains("TIGER42"));
+    // No header: the JS API page, which reveals nothing by itself.
+    let (s, headers, body) = send(&router, gate(None)).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(body.contains("SafeExamBrowser") && !body.contains("TIGER42"), "{body}");
+    let csp = headers.get(header::CONTENT_SECURITY_POLICY).unwrap().to_str().unwrap().to_string();
+    let nonce = csp.split("'nonce-").nth(1).unwrap().split('\'').next().unwrap();
+    assert!(body.contains(&format!("nonce=\"{nonce}\"")));
     let wrong = proto::seb_file::config_key_hash("https://exam.test/gate/e2", &ck);
     let (s, _, _) = send(&router, gate(Some(wrong))).await;
     assert_eq!(s, StatusCode::FORBIDDEN);
@@ -274,6 +278,30 @@ async fn start_job_carries_seb_and_gate_checks_config_key() {
     assert!(body.contains("TIGER42"), "{body}");
     assert!(body.contains("Quiz &lt;1&gt;"), "names are escaped");
     assert!(headers.get(header::CONTENT_SECURITY_POLICY).unwrap().to_str().unwrap().contains("default-src 'none'"));
+
+    // JS API path: page URL + configKey posted back.
+    let verify = |url: &str, ck: &str| {
+        let body = format!("url={}&ck={ck}", url.replace(':', "%3A").replace('/', "%2F").replace('?', "%3F").replace('#', "%23"));
+        Request::post("/gate/e1/verify")
+            .header(header::HOST, HOST)
+            .header(header::ORIGIN, ORIGIN)
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(body))
+            .unwrap()
+    };
+    let js_ck = proto::seb_file::config_key_hash("https://exam.test/gate/e1", &ck);
+    let (s, _, body) = send(&router, verify("https://exam.test/gate/e1#top", &js_ck)).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(body.contains("TIGER42"));
+    let (s, _, _) = send(&router, verify("https://exam.test/gate/e1", "00")).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    // A valid hash for another page of the same server is not accepted here.
+    let other = proto::seb_file::config_key_hash("https://exam.test/gate/e1x", &ck);
+    let (s, _, _) = send(&router, verify("https://exam.test/gate/e1x", &other)).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+    let elsewhere = proto::seb_file::config_key_hash("https://evil.test/gate/e1", &ck);
+    let (s, _, _) = send(&router, verify("https://evil.test/gate/e1", &elsewhere)).await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
 
     // .seb download is for signed-in instructors only.
     let dl = |cookie: Option<&str>| {
@@ -290,6 +318,25 @@ async fn start_job_carries_seb_and_gate_checks_config_key() {
     assert_eq!(s, StatusCode::OK);
     assert_eq!(headers.get("x-seb-config-key").unwrap(), ck.as_str());
     assert!(headers.get(header::CONTENT_DISPOSITION).unwrap().to_str().unwrap().contains("quiz-1.seb"));
+
+    // Password-encrypted copy for official SEB on student machines.
+    let locked = |pw: &str| {
+        Request::post("/exams/e1/exam.seb")
+            .header(header::HOST, HOST)
+            .header(header::ORIGIN, ORIGIN)
+            .header(header::COOKIE, &cookie)
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!("password={pw}")))
+            .unwrap()
+    };
+    let res = router.clone().oneshot(locked("correct-horse")).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    assert!(proto::seb_file::container::decode(&bytes, None).is_err());
+    let xml = proto::seb_file::container::decode(&bytes, Some("correct-horse")).unwrap();
+    assert_eq!(proto::seb_file::config_key(&proto::seb_file::from_xml(&xml).unwrap()), ck);
+    let (s, _, _) = send(&router, locked("ab")).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]
