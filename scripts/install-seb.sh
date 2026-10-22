@@ -58,9 +58,13 @@ fi
 
 echo "copy $CACHE -> $HOST:~/safe-exam-browser"
 sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$CACHE" "$HOST:~/safe-exam-browser"
-remote "chmod +x ~/safe-exam-browser && mkdir -p ~/webkit-extensions"
-echo "copy $EXT_CACHE -> $HOST:~/webkit-extensions/"
-sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$EXT_CACHE" "$HOST:~/webkit-extensions/libseb-web-extension.so"
+remote "chmod +x ~/safe-exam-browser"
+# System location, so it is found wherever the binary ends up
+# (~/safe-exam-browser, or /usr/local/bin after scripts/install-gpu.sh).
+echo "copy $EXT_CACHE -> $HOST:/usr/lib/seb-linux/webkit-extensions/"
+sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$EXT_CACHE" "$HOST:/tmp/libseb-web-extension.so"
+remote_sudo "install -D -m 644 /tmp/libseb-web-extension.so /usr/lib/seb-linux/webkit-extensions/libseb-web-extension.so"
+remote "rm -f /tmp/libseb-web-extension.so"
 
 echo "apt SEB runtime"
 remote_sudo "apt-get update"
