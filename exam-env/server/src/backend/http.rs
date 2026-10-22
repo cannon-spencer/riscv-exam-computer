@@ -183,6 +183,7 @@ async fn gate(State(ctx): State<Ctx>, Path(id): Path<String>, req: Request) -> R
         );
     }
 
+    println!("gate ok for exam {id} ({url})");
     if spec.access_code.is_empty() {
         return Redirect::to(&spec.start_url).into_response();
     }
