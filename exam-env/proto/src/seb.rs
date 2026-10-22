@@ -16,6 +16,11 @@ pub struct ExamSpec {
     pub start_url: String,
     pub allowed_domains: Vec<String>,
     pub allow_quit: bool,
+    /// Canvas quiz access code. Shown to the student by the exam server's
+    /// gate page only after the board's Config Key hash checks out, so the
+    /// quiz cannot be opened from an ordinary browser.
+    #[serde(default)]
+    pub access_code: String,
 }
 
 /// Returns the lowercase host of an `http(s)` URL, rejecting user info and
@@ -171,6 +176,7 @@ mod tests {
             start_url: url.into(),
             allowed_domains: domains.iter().map(|s| s.to_string()).collect(),
             allow_quit: false,
+            ..Default::default()
         }
     }
 

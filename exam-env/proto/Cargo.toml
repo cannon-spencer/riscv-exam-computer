@@ -1,12 +1,28 @@
 [package]
 name = "proto"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "Wire types shared by the exam server, seb-agent, and sim-agent"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+plist = { version = "1.7", default-features = false }
+sha2 = "0.10"
+base64 = "0.22"
+
+# `container`: writing/reading the .seb binary container (gzip, "plnd"/"pswd").
+flate2 = { version = "1", optional = true, default-features = false, features = ["rust_backend"] }
+aes = { version = "0.8", optional = true }
+cbc = { version = "0.1", optional = true, features = ["alloc", "block-padding"] }
+hmac = { version = "0.12", optional = true }
+pbkdf2 = { version = "0.12", optional = true, default-features = false, features = ["hmac"] }
+sha1 = { version = "0.10", optional = true }
+getrandom = { version = "0.3", optional = true }
+
+[features]
+default = []
+container = ["dep:flate2", "dep:aes", "dep:cbc", "dep:hmac", "dep:pbkdf2", "dep:sha1", "dep:getrandom"]
 
 [dev-dependencies]
 regex = "1"
