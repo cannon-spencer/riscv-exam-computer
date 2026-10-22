@@ -18,7 +18,7 @@
 +		}
 +		if (best) return best;
 +	}
-+	return cage_pick_mode(o);
++	return wlr_output_preferred_mode(o);
 +}
 +
  static void output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data);

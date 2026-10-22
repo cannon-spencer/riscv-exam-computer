@@ -1,5 +1,19 @@
 #!/bin/bash
-URL="$1"
-[ -n "$URL" ] || { echo "usage: seb-launch.sh <url>"; exit 1; }
-export CAGE_MODE=1280x720 SEB_IN_CAGE=1 MESA_LOADER_DRIVER_OVERRIDE=pvr GDK_GL=gles GDK_BACKEND=wayland QT_QPA_PLATFORM=wayland
-exec cage -- sudo -E /home/orangepi/seb-linux/build/bin/safe-exam-browser --anti-cheat "$URL"
+URL="${1:-}"
+if [ -z "$URL" ]; then
+  echo "usage: seb-launch.sh <url>" >&2
+  exit 1
+fi
+SEB_BIN="${SEB_BIN:-/usr/local/bin/safe-exam-browser}"
+if [ ! -x "$SEB_BIN" ]; then
+  echo "SEB binary is not executable: $SEB_BIN" >&2
+  exit 1
+fi
+export CAGE_MODE=1280x720
+export SEB_IN_CAGE=1
+export MESA_LOADER_DRIVER_OVERRIDE=pvr
+export GDK_GL=gles
+export GDK_BACKEND=wayland
+export QT_QPA_PLATFORM=wayland
+unset WEBKIT_DISABLE_COMPOSITING_MODE
+exec cage -- "$SEB_BIN" --anti-cheat "$URL"

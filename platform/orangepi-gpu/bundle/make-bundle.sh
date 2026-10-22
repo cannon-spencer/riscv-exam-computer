@@ -40,5 +40,4 @@ EOR
 cd ~/bundle
 tar czf seb-gpu-orangepi-rv.tar.gz seb-gpu-orangepi-rv
 sha256sum seb-gpu-orangepi-rv.tar.gz > seb-gpu-orangepi-rv.tar.gz.sha256
-cp ~/make-bundle.sh ~/seb-gpu-repo/bundle/
 ls -lh ~/bundle
