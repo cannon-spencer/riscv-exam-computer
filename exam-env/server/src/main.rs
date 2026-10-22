@@ -1,3 +1,5 @@
+mod exam;
+
 use axum::{
     extract::State,
     routing::{get, post},
@@ -16,6 +18,12 @@ struct Machine {
     last_seen: Instant,
     state: String,
     pending: Option<String>,
+}
+
+#[derive(Clone)]
+struct AppState {
+    machines: Db,
+    exam: Arc<Mutex<Option<exam::ExamFile>>>,
 }
 
 type Db = Arc<Mutex<HashMap<String, Machine>>>;
@@ -39,22 +47,26 @@ struct MachineView {
 
 #[tokio::main]
 async fn main() {
-    let db: Db = Arc::new(Mutex::new(HashMap::new()));
+    let state = AppState {
+        machines: Arc::new(Mutex::new(HashMap::new())),
+        exam: Arc::new(Mutex::new(None)),
+    };
     let app = Router::new()
         .route("/heartbeat", post(heartbeat))
         .route("/machines", get(machines))
         .route("/start", post(enqueue_start))
         .route("/stop", post(enqueue_stop))
-        .with_state(db);
+        .route("/exam.seb", get(exam::get).post(exam::put))
+        .with_state(state);
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     println!("listening on {addr}");
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn heartbeat(State(db): State<Db>, Json(hb): Json<Heartbeat>) -> Json<Value> {
+async fn heartbeat(State(app): State<AppState>, Json(hb): Json<Heartbeat>) -> Json<Value> {
     let job = {
-        let mut map = db.lock().unwrap();
+        let mut map = app.machines.lock().unwrap();
         let m = map.entry(hb.host.clone()).or_insert(Machine {
             last_seen: Instant::now(),
             state: String::new(),
@@ -82,8 +94,8 @@ async fn heartbeat(State(db): State<Db>, Json(hb): Json<Heartbeat>) -> Json<Valu
     Json(json!({ "ok": true, "job": job }))
 }
 
-async fn machines(State(db): State<Db>) -> Json<Vec<MachineView>> {
-    let map = db.lock().unwrap();
+async fn machines(State(app): State<AppState>) -> Json<Vec<MachineView>> {
+    let map = app.machines.lock().unwrap();
     let now = Instant::now();
     let mut rows: Vec<_> = map
         .iter()
@@ -98,12 +110,12 @@ async fn machines(State(db): State<Db>) -> Json<Vec<MachineView>> {
     Json(rows)
 }
 
-async fn enqueue_start(State(db): State<Db>) -> Json<Value> {
-    Json(json!({ "ok": true, "queued": enqueue(&db, "start") }))
+async fn enqueue_start(State(app): State<AppState>) -> Json<Value> {
+    Json(json!({ "ok": true, "queued": enqueue(&app.machines, "start") }))
 }
 
-async fn enqueue_stop(State(db): State<Db>) -> Json<Value> {
-    Json(json!({ "ok": true, "queued": enqueue(&db, "stop") }))
+async fn enqueue_stop(State(app): State<AppState>) -> Json<Value> {
+    Json(json!({ "ok": true, "queued": enqueue(&app.machines, "stop") }))
 }
 
 fn enqueue(db: &Db, job: &str) -> Vec<String> {
