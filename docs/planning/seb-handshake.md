@@ -30,7 +30,15 @@ exam server: sha256(url + config key) matches? --> access code + link to Canvas
   POSTing a password to the same URL gives a password-encrypted copy for
   official SEB on student laptops. Boards always get the unlocked file.
 - On the board, seb-linux's WebKitGTK extension sends the key headers and
-  enforces the URL filter (seb-linux fork, `webkit-extensions/`).
+  enforces the URL filter. `install-seb.sh` puts it in
+  `/usr/lib/seb-linux/webkit-extensions/`; SEB refuses to start an exam
+  without it. It works with both the stock WebKit and the GPU build
+  (WebKitGTK 2.38.2, API 4.1).
+- `start-seb.sh` uses `seb-remote.sh` (cage on tty7) when the GPU stack is
+  installed and falls back to xinit otherwise. It always opens the local
+  `~/exam.seb` from the start job. Serving .seb files over `seb://` without
+  a login would let anyone compute the Config Key hash by hand, so the
+  server only hands them to boards (agent token) and signed-in instructors.
 
 ## Setting up an exam
 
