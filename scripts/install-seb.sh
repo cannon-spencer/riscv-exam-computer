@@ -6,6 +6,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CACHE="$ROOT/cache/safe-exam-browser"
 SEB_URL="${SEB_URL:-https://github.com/cannon-spencer/seb-linux/releases/download/riscv64/safe-exam-browser}"
+# WebKitGTK extension: URL filter + SEB key headers. SEB won't start without it.
+EXT_CACHE="$ROOT/cache/libseb-web-extension.so"
+EXT_URL="${EXT_URL:-https://github.com/cannon-spencer/seb-linux/releases/download/riscv64/libseb-web-extension.so}"
 HOST=""
 BOARD_PASS="${BOARD_PASS:-orangepi}"
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=30)
@@ -45,9 +48,23 @@ else
   echo "using $CACHE"
 fi
 
+if [[ ! -f "$EXT_CACHE" ]]; then
+  echo "downloading $EXT_URL"
+  curl -fL --retry 3 -o "$EXT_CACHE.tmp" "$EXT_URL" || die "no extension in the release yet ($EXT_URL)"
+  mv "$EXT_CACHE.tmp" "$EXT_CACHE"
+else
+  echo "using $EXT_CACHE"
+fi
+
 echo "copy $CACHE -> $HOST:~/safe-exam-browser"
 sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$CACHE" "$HOST:~/safe-exam-browser"
 remote "chmod +x ~/safe-exam-browser"
+# System location, so it is found wherever the binary ends up
+# (~/safe-exam-browser, or /usr/local/bin after scripts/install-gpu.sh).
+echo "copy $EXT_CACHE -> $HOST:/usr/lib/seb-linux/webkit-extensions/"
+sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$EXT_CACHE" "$HOST:/tmp/libseb-web-extension.so"
+remote_sudo "install -D -m 644 /tmp/libseb-web-extension.so /usr/lib/seb-linux/webkit-extensions/libseb-web-extension.so"
+remote "rm -f /tmp/libseb-web-extension.so"
 
 echo "apt SEB runtime"
 remote_sudo "apt-get update"

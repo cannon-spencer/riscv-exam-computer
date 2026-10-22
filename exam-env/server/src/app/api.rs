@@ -92,10 +92,10 @@ pub async fn list_exams() -> Result<Vec<ExamView>, ServerFnError> {
 }
 
 #[server]
-pub async fn create_exam(name: String, start_url: String, domains: String, allow_quit: bool) -> Result<String, ServerFnError> {
+pub async fn create_exam(name: String, start_url: String, domains: String, allow_quit: bool, access_code: String) -> Result<String, ServerFnError> {
     let ctx = imp::ctx()?;
     let allowed_domains = proto::seb::parse_domain_list(&domains).map_err(imp::fail)?;
-    let spec = proto::seb::ExamSpec { start_url, allowed_domains, allow_quit };
+    let spec = proto::seb::ExamSpec { start_url, allowed_domains, allow_quit, access_code };
     let id = crate::backend::auth::random_hex(4);
     let r = ctx.app.fleet.lock().unwrap().create_exam(id, &name, spec, imp::wall_ms());
     r.map_err(imp::fail)

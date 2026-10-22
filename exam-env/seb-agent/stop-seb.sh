@@ -1,6 +1,13 @@
 #!/bin/sh
 # Runs as root. start-seb.sh execs xinit under sudo; killing sudo leaves
 # X/SEB on :1. Tear the session down, then put a text getty back on screen.
+# GPU stack: SEB runs in cage under the seb-kiosk unit (seb-remote.sh).
+if systemctl is-active --quiet seb-kiosk 2>/dev/null; then
+  systemctl stop seb-kiosk || true
+  chvt 2 2>/dev/null || true
+  exit 0
+fi
+
 pkill -f /home/orangepi/safe-exam-browser || true
 pkill -f '/usr/bin/xinit /bin/sh' || true
 if [ -e /tmp/.X11-unix/X1 ]; then

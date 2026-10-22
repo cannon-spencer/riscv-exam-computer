@@ -2,7 +2,8 @@
 
 use leptos::prelude::*;
 use leptos_meta::Title;
-use proto::seb::{ExamSpec, effective_domains, parse_domain_list, seb_config, url_host};
+use proto::seb::{ExamSpec, effective_domains, parse_domain_list, url_host};
+use proto::seb_file::{SebOptions, exam_settings, to_xml};
 
 use super::Shell;
 use super::api::{create_exam, delete_exam, error_text, list_exams};
@@ -79,6 +80,7 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
     let url = RwSignal::new(String::new());
     let domains = RwSignal::new(String::new());
     let quit = RwSignal::new(false);
+    let access_code = RwSignal::new(String::new());
     let touched = RwSignal::new(false);
 
     let url_error = Memo::new(move |_| {
@@ -87,17 +89,22 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
     });
     let domain_error = Memo::new(move |_| parse_domain_list(&domains.get()).err());
     let spec = Memo::new(move |_| -> Result<ExamSpec, String> {
-        Ok(ExamSpec { start_url: url.get().trim().to_string(), allowed_domains: parse_domain_list(&domains.get())?, allow_quit: quit.get() })
+        Ok(ExamSpec {
+            start_url: url.get().trim().to_string(),
+            allowed_domains: parse_domain_list(&domains.get())?,
+            allow_quit: quit.get(),
+            access_code: access_code.get().trim().to_string(),
+        })
     });
     let preview = Memo::new(move |_| {
         let s = spec.get()?;
-        let v = seb_config(&s)?;
-        Ok::<_, String>((effective_domains(&s)?, serde_json::to_string_pretty(&v).unwrap_or_default()))
+        let xml = to_xml(&exam_settings(&s, &SebOptions::default())?);
+        Ok::<_, String>((effective_domains(&s)?, xml))
     });
 
-    let create = Action::new(move |(n, u, d, q): &(String, String, String, bool)| {
-        let (n, u, d, q) = (n.clone(), u.clone(), d.clone(), *q);
-        async move { create_exam(n, u, d, q).await.map_err(|e| error_text(&e)) }
+    let create = Action::new(move |(n, u, d, q, c): &(String, String, String, bool, String)| {
+        let (n, u, d, q, c) = (n.clone(), u.clone(), d.clone(), *q, c.clone());
+        async move { create_exam(n, u, d, q, c).await.map_err(|e| error_text(&e)) }
     });
     let result = RwSignal::new(None::<Result<String, String>>);
     Effect::new(move |_| {
@@ -107,6 +114,7 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
                 url.set(String::new());
                 domains.set(String::new());
                 quit.set(false);
+                access_code.set(String::new());
                 touched.set(false);
                 refresh();
             }
@@ -119,7 +127,7 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
         if name.get_untracked().trim().is_empty() || url.get_untracked().trim().is_empty() || preview.get_untracked().is_err() {
             return;
         }
-        create.dispatch((name.get_untracked(), url.get_untracked(), domains.get_untracked(), quit.get_untracked()));
+        create.dispatch((name.get_untracked(), url.get_untracked(), domains.get_untracked(), quit.get_untracked(), access_code.get_untracked()));
     };
     let add_domain = move |d: &'static str| {
         domains.update(|text| {
@@ -189,6 +197,14 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
                         }).collect_view()}
                     </div>
 
+                    <label class="field">
+                        <span class="field-label">"Canvas access code"</span>
+                        <input type="text" maxlength="64" autocomplete="off" spellcheck="false" class="mono"
+                            placeholder="Set the same code on the Canvas quiz"
+                            prop:value=move || access_code.get() on:input=move |ev| access_code.set(event_target_value(&ev))/>
+                        <span class="field-hint">"Boards first open the exam server, which checks Safe Exam Browser's Config Key and only then shows this code. Leave empty to skip the code and go straight to Canvas after the check."</span>
+                    </label>
+
                     <label class="check-field">
                         <input type="checkbox" prop:checked=move || quit.get() on:change=move |ev| quit.set(event_target_checked(&ev))/>
                         <span>
@@ -214,7 +230,7 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
                         <p class="muted">"Paste a start URL to preview the generated Safe Exam Browser config."</p>
                     }.into_any(),
                     Err(e) => view! { <ErrorNote text=e/> }.into_any(),
-                    Ok((allowed, json)) => view! {
+                    Ok((allowed, xml)) => view! {
                         <p class="small muted">"Allowed sites (and their subdomains):"</p>
                         <ul class="chips static">
                             {allowed.into_iter().map(|d| view! { <li class="chip mono">{d}</li> }).collect_view()}
@@ -222,7 +238,8 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
                         <p class="small">
                             {move || if quit.get() { "Students can quit SEB themselves." } else { "Students cannot quit SEB." }}
                         </p>
-                        <pre class="json" tabindex="0" aria-label="Generated configuration"><code>{json}</code></pre>
+                        <p class="small muted">"Safe Exam Browser settings (.seb). The server adds the gate start page and a per-exam key salt."</p>
+                        <pre class="json" tabindex="0" aria-label="Generated configuration"><code>{xml}</code></pre>
                     }.into_any(),
                 }}
             </section>
@@ -247,11 +264,32 @@ fn ExamsBody(initial: Vec<ExamView>) -> impl IntoView {
                             <p class="small">
                                 {if e.allow_quit { "Students may quit SEB" } else { "Students cannot quit SEB" }}
                             </p>
+                            <p class="small">
+                                {match &e.gate_url {
+                                    Some(_) if e.has_access_code => "Gated: access code shown after the Config Key check",
+                                    Some(_) => "Gated: Config Key checked, no access code",
+                                    None => "Not gated: EXAM_PUBLIC_URL is unset",
+                                }}
+                            </p>
+                            <p class="small muted">"Config Key"</p>
+                            <p class="mono small break">{e.config_key.clone()}</p>
                             <details>
-                                <summary>"Generated SEB config"</summary>
+                                <summary>"seb-linux JSON (older agents)"</summary>
                                 <pre class="json" tabindex="0"><code>{e.config_json.clone()}</code></pre>
                             </details>
                             <div class="exam-card-actions">
+                                <a class="btn ghost small" href=format!("/exams/{}/exam.seb", e.id)>"Download .seb"</a>
+                                <details class="seb-locked">
+                                    <summary class="btn ghost small">"With password…"</summary>
+                                    <form class="form inline" method="post" action=format!("/exams/{}/exam.seb", e.id)>
+                                        <label class="field">
+                                            <span class="field-label">"Password students type to open it"</span>
+                                            <input type="password" name="password" required minlength="4" maxlength="128" autocomplete="new-password"/>
+                                            <span class="field-hint">"For official SEB on student laptops. Boards always get the unlocked file."</span>
+                                        </label>
+                                        <button type="submit" class="btn secondary small">"Download locked .seb"</button>
+                                    </form>
+                                </details>
                                 <a class="btn ghost small" download=file_name(&e.name) href=data_url(&e.config_json)>"Download JSON"</a>
                                 <ConfirmButton label="Delete" confirm="Click again to delete" icon=Icon::Trash class="btn danger small"
                                     on_confirm={

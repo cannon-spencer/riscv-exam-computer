@@ -6,11 +6,12 @@
 //! `null` when there is no job) so old agents keep working.
 
 pub mod seb;
+pub mod seb_file;
 
 use serde::{Deserialize, Serialize};
 
 /// Bumped when agents gain new behavior the server may rely on.
-pub const PROTOCOL_VERSION: u32 = 2;
+pub const PROTOCOL_VERSION: u32 = 3;
 
 /// State strings an agent reports. Kept as strings on the wire because old
 /// agents send free-form `state` (and an empty string when missing).
@@ -104,8 +105,15 @@ pub struct HeartbeatReply {
 pub struct ExamPayload {
     pub id: String,
     pub name: String,
-    /// seb-linux JSON configuration, written to disk verbatim by the agent.
+    /// seb-linux JSON configuration (protocol 2 agents and sim-agent).
     pub config: serde_json::Value,
+    /// Standard `.seb` file, base64. Protocol 3 agents write it to disk and
+    /// start SEB with it; SEB then sends this exam's Config Key hashes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seb: Option<String>,
+    /// Config Key of `seb`, for logging and for checking on the board.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config_key: Option<String>,
 }
 
 #[cfg(test)]
