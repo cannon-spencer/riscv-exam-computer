@@ -25,6 +25,7 @@ pub const MAX_EVENTS: usize = 5000;
 pub const MAX_EXAMS: usize = 200;
 pub const MAX_LABEL: usize = 48;
 pub const MAX_EXAM_NAME: usize = 80;
+pub const MAX_ACCESS_CODE: usize = 64;
 const TEMP_SAMPLES: usize = 120;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,6 +34,17 @@ pub struct Exam {
     pub name: String,
     pub spec: ExamSpec,
     pub created_ms: i64,
+    /// `examKeySalt` for this exam's .seb, hex. Fixed at creation so the
+    /// Config Key stays the same across restarts and re-downloads.
+    #[serde(default)]
+    pub seb_salt: String,
+}
+
+/// A generated .seb for one exam.
+pub struct SebBuild {
+    pub xml: String,
+    pub config_key: String,
+    pub start_url: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -109,6 +121,7 @@ pub struct Fleet {
     /// Set when something that is persisted changed.
     pub dirty: bool,
     cap_warned: bool,
+    public_url: Option<String>,
 }
 
 pub fn valid_host(host: &str) -> bool {
@@ -137,7 +150,47 @@ impl Fleet {
             max_boards,
             dirty: false,
             cap_warned: false,
+            public_url: None,
         }
+    }
+
+    /// Public base URL of this server as boards reach it, e.g.
+    /// `https://riscv-exam-computer.download`. Turns on the gate.
+    pub fn set_public_url(&mut self, url: Option<String>) {
+        self.public_url = url.map(|u| u.trim_end_matches('/').to_string());
+    }
+
+    pub fn public_url(&self) -> Option<&str> {
+        self.public_url.as_deref()
+    }
+
+    /// Gate URL for an exam, if the gate is on.
+    pub fn gate_url(&self, exam_id: &str) -> Option<String> {
+        self.public_url.as_ref().map(|b| format!("{b}/gate/{exam_id}"))
+    }
+
+    pub fn exam(&self, id: &str) -> Option<&Exam> {
+        self.exams.iter().find(|e| e.id == id)
+    }
+
+    /// Builds the exam's .seb settings. With the gate on, boards start at
+    /// the gate, which checks the Config Key and then sends them to Canvas.
+    pub fn seb_build(&self, exam: &Exam) -> Result<SebBuild, String> {
+        let salt = (0..exam.seb_salt.len() / 2)
+            .map(|i| u8::from_str_radix(&exam.seb_salt[2 * i..2 * i + 2], 16))
+            .collect::<Result<Vec<u8>, _>>()
+            .map_err(|_| "corrupt exam salt")?;
+        let opts = proto::seb_file::SebOptions {
+            start_url_override: self.gate_url(&exam.id),
+            exam_key_salt: salt,
+            quit_password: None,
+        };
+        let settings = proto::seb_file::exam_settings(&exam.spec, &opts)?;
+        Ok(SebBuild {
+            xml: proto::seb_file::to_xml(&settings),
+            config_key: proto::seb_file::config_key(&settings),
+            start_url: opts.start_url_override.unwrap_or_else(|| exam.spec.start_url.clone()),
+        })
     }
 
     pub fn from_snapshot(s: Snapshot, max_boards: usize) -> Self {
@@ -146,6 +199,11 @@ impl Fleet {
             f.boards.insert(rec.host.clone(), Board { rec, live: None });
         }
         f.exams = s.exams;
+        for e in f.exams.iter_mut().filter(|e| e.seb_salt.is_empty()) {
+            // Exams saved before .seb support get a salt now.
+            e.seb_salt = proto::seb_file::hex(&proto::seb_file::container::new_salt());
+            f.dirty = true;
+        }
         f.log = s.activity.into_iter().collect();
         f.next_event_id = s.next_event_id.max(f.log.back().map_or(0, |e| e.id) + 1);
         f.next_job_id = s.next_job_id.max(1);
@@ -358,7 +416,16 @@ impl Fleet {
                 let id = exam_id.filter(|s| !s.is_empty()).ok_or("Choose an exam to start")?;
                 let exam = self.exams.iter().find(|e| e.id == id).ok_or("That exam no longer exists")?;
                 let config = proto::seb::seb_config(&exam.spec)?;
-                Some(ExamPayload { id: exam.id.clone(), name: exam.name.clone(), config })
+                let seb = self.seb_build(exam)?;
+                use base64::Engine;
+                let bytes = proto::seb_file::container::encode(&seb.xml, None);
+                Some(ExamPayload {
+                    id: exam.id.clone(),
+                    name: exam.name.clone(),
+                    config,
+                    seb: Some(base64::engine::general_purpose::STANDARD.encode(bytes)),
+                    config_key: Some(seb.config_key),
+                })
             }
             JobKind::Stop => None,
         };
@@ -487,9 +554,16 @@ impl Fleet {
                 .map(|d| proto::seb::normalize_domain(d))
                 .collect::<Result<_, _>>()?,
             allow_quit: spec.allow_quit,
+            access_code: spec.access_code.trim().to_string(),
         };
+        if spec.access_code.chars().count() > MAX_ACCESS_CODE || spec.access_code.chars().any(char::is_control) {
+            return Err(format!("Access codes can be at most {MAX_ACCESS_CODE} characters"));
+        }
         proto::seb::seb_config(&spec)?;
-        self.exams.push(Exam { id: id.clone(), name: name.to_string(), spec, created_ms: wall_ms });
+        let seb_salt = proto::seb_file::hex(&proto::seb_file::container::new_salt());
+        let exam = Exam { id: id.clone(), name: name.to_string(), spec, created_ms: wall_ms, seb_salt };
+        self.seb_build(&exam)?;
+        self.exams.push(exam);
         self.log(wall_ms, Actor::Instructor, Level::Info, None, format!("Exam created: {name}"));
         Ok(id)
     }
@@ -604,6 +678,9 @@ impl Fleet {
                 config_json: proto::seb::seb_config(&e.spec)
                     .map(|v| serde_json::to_string_pretty(&v).unwrap_or_default())
                     .unwrap_or_else(|err| format!("// invalid: {err}")),
+                has_access_code: !e.spec.access_code.is_empty(),
+                gate_url: self.gate_url(&e.id),
+                config_key: self.seb_build(e).map(|b| b.config_key).unwrap_or_default(),
             })
             .collect()
     }
@@ -644,7 +721,7 @@ mod tests {
 
     fn fleet_with_exam() -> (Fleet, String) {
         let mut f = Fleet::new(8);
-        let spec = ExamSpec { start_url: "https://ufl.instructure.com/courses/1/quizzes/2".into(), allowed_domains: vec!["ufl.edu".into()], allow_quit: false };
+        let spec = ExamSpec { start_url: "https://ufl.instructure.com/courses/1/quizzes/2".into(), allowed_domains: vec!["ufl.edu".into()], allow_quit: false, ..Default::default() };
         let id = f.create_exam("e1".into(), "Quiz 1", spec, T0).unwrap();
         (f, id)
     }
