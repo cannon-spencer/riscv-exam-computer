@@ -14,13 +14,17 @@ This does not make exams fast. The JH7110 main thread is still the limit. What t
 
 ## Install the release and run SEB
 
-1. Download `seb-gpu-orangepi-rv.tar.gz` and the `.sha256` from the `gpu-stack-v1` release.
-2. `sha256sum -c seb-gpu-orangepi-rv.tar.gz.sha256`
-3. `tar xzf seb-gpu-orangepi-rv.tar.gz && cd seb-gpu-orangepi-rv && ./install.sh`
-4. Build SEB from seb-linux `main` at `f6decb6` ([seb-linux#1](https://github.com/cannon-spencer/seb-linux/pull/1), merged) with `CONFIG+=force_webkitgtk`.
-5. `sudo install -m 755 build/bin/safe-exam-browser /usr/local/bin/safe-exam-browser`
-6. From this folder, `system/setup-system.sh`. That installs `seb-launch.sh` and `seb-remote.sh` to `/usr/local/bin` and allows `orangepi` to run `seb-remote.sh` as root.
-7. `sudo seb-remote.sh 'seb://<host>:8000/<file>.seb'`
+From the laptop, after `scripts/install-seb.sh`:
+
+```
+./scripts/install-gpu.sh --host orangepi@<ip>
+```
+
+That downloads the `gpu-stack-v1` tarball into `cache/`, checks the hash, installs it on the board, copies `seb-launch.sh` and `seb-remote.sh` to `/usr/local/bin`, and allows that user to run `seb-remote.sh` as root. If `~/safe-exam-browser` is already on the board, it is copied to `/usr/local/bin/safe-exam-browser`.
+
+The SEB binary has to be built from seb-linux `main` at `f6decb6` ([seb-linux#1](https://github.com/cannon-spencer/seb-linux/pull/1), merged). `scripts/install-seb.sh` installs the published `riscv64` release, which does not include that commit until the release is rebuilt. Do not run `install-seb.sh` again afterward: its `apt-get install libwebkit2gtk-4.1-0` can put the CPU WebKit back.
+
+`sudo seb-remote.sh 'seb://<host>:8000/<file>.seb'`
 
 Stop: `sudo systemctl stop seb-kiosk; sudo chvt 2`
 
