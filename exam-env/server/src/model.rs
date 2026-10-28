@@ -143,6 +143,11 @@ pub struct ExamView {
     pub allow_quit: bool,
     pub created_ms: i64,
     pub config_json: String,
+    /// The access code itself never leaves the server except via the gate.
+    pub has_access_code: bool,
+    /// Where boards start; `None` when EXAM_PUBLIC_URL is unset (no gate).
+    pub gate_url: Option<String>,
+    pub config_key: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

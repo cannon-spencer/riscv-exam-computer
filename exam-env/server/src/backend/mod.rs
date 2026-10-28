@@ -42,6 +42,8 @@ pub struct Config {
     pub max_boards: usize,
     pub allowed_origins: Vec<String>,
     pub cookie_secure: CookieSecure,
+    /// Base URL boards use to reach this server; enables the SEB gate.
+    pub public_url: Option<String>,
 }
 
 impl Config {
@@ -66,6 +68,7 @@ impl Config {
                 Some("0" | "false" | "never") => CookieSecure::Never,
                 _ => CookieSecure::Auto,
             },
+            public_url: var("EXAM_PUBLIC_URL"),
         };
         (cfg, generated)
     }
@@ -95,6 +98,17 @@ impl App {
             }
             None => Fleet::new(cfg.max_boards),
         };
+        if let Some(u) = &cfg.public_url {
+            if proto::seb::url_host(u).is_err() {
+                eprintln!("warning: EXAM_PUBLIC_URL={u} is not an https URL; the SEB gate stays off");
+            } else {
+                fleet.set_public_url(Some(u.clone()));
+            }
+        }
+        if fleet.public_url().is_none() {
+            fleet.log(wall_ms(), crate::model::Actor::System, crate::model::Level::Warn, None,
+                "EXAM_PUBLIC_URL is not set: boards open Canvas directly and the Config Key is not checked");
+        }
         fleet.log(wall_ms(), crate::model::Actor::System, crate::model::Level::Info, None, "Server started");
         Ok(App {
             fleet: Mutex::new(fleet),
