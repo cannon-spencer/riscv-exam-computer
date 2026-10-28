@@ -4,6 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+AGENT="$ROOT/exam-env/seb-agent"
 CACHE="$ROOT/cache/safe-exam-browser"
 SEB_URL="${SEB_URL:-https://github.com/cannon-spencer/seb-linux/releases/download/riscv64/safe-exam-browser}"
 # Temporary: the riscv64 release has no libseb-web-extension.so, so this 404s.
@@ -60,6 +61,12 @@ fi
 echo "copy $CACHE -> $HOST:~/safe-exam-browser"
 sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$CACHE" "$HOST:~/safe-exam-browser"
 remote "chmod +x ~/safe-exam-browser"
+
+echo "copy start-seb.sh and stop-seb.sh"
+sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" \
+  "$AGENT/start-seb.sh" "$AGENT/stop-seb.sh" "$HOST:~/"
+remote "chmod +x ~/start-seb.sh ~/stop-seb.sh"
+
 # System location, so it is found wherever the binary ends up
 # (~/safe-exam-browser, or /usr/local/bin after scripts/install-gpu.sh).
 # echo "copy $EXT_CACHE -> $HOST:/usr/lib/seb-linux/webkit-extensions/"
@@ -68,9 +75,13 @@ remote "chmod +x ~/safe-exam-browser"
 # remote "rm -f /tmp/libseb-web-extension.so"
 
 echo "apt SEB runtime"
-remote_sudo "apt-get update"
-remote_sudo "apt-get install -y libwebkit2gtk-4.1-0 libgtk-3-0 \
+# One sudo shell. A second SSH connection is what skipped this install last time.
+# update can fail the snapshot signature check; the image already has indexes.
+install='apt-get update || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  libwebkit2gtk-4.1-0 libgtk-3-0 \
   libqt6core6 libqt6gui6 libqt6widgets6 libqt6network6 libqt6xml6 \
-  libqt6svg6 qt6-qpa-plugins libxcb-cursor0 libssl3"
+  libqt6svg6 qt6-qpa-plugins qt6-wayland libxcb-cursor0 libssl3'
+remote_sudo "bash -c $(printf %q "$install")"
 
 echo "SEB:  ~/safe-exam-browser"
