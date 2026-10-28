@@ -4,7 +4,7 @@ version = "0.3.0"
 edition = "2024"
 
 [dependencies]
-proto = { path = "../proto" }
+proto = { path = "../proto", features = ["container"] }
 ureq = "3.4.0"
 serde_json = "1.0.151"
 base64 = "0.22"

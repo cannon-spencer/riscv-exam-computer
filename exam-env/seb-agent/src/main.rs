@@ -1,9 +1,11 @@
 //! Board daemon: heartbeats the exam server and runs SEB on request.
 //!
 //! Protocol 3: a `start` job carries the exam's standard `.seb` file. The
-//! agent writes it to `~/exam.seb` (atomically) and `start-seb.sh` opens it,
-//! so SEB sends that exam's Config Key hashes to the server's gate. A start
-//! job without a `.seb` (older server) falls back to whatever `~/exam.seb`
+//! agent writes the plain XML plist to `~/exam.seb` (atomically) and
+//! `start-seb.sh` opens it, so SEB sends that exam's Config Key hashes to
+//! the server's gate. This SEB build stops after the `plnd` marker and does
+//! not open the gzip-wrapped settings inside a standard file. A start job
+//! without a `.seb` (older server) falls back to whatever `~/exam.seb`
 //! already holds.
 
 use std::fs;
@@ -39,11 +41,18 @@ fn running(child: &mut Option<Child>) -> bool {
     }
 }
 
+/// Plain XML plist. The board's SEB opens that, and a standard `.seb` is
+/// gzip(`plnd` + gzip(xml)).
+fn seb_on_disk(bytes: &[u8]) -> Result<Vec<u8>, String> {
+    proto::seb_file::container::decode(bytes, None)
+}
+
 /// Writes the exam's .seb next to the scripts. Temp file + rename, so SEB
 /// never reads a half-written file.
 fn install_exam(exam: &ExamPayload) -> Result<(), String> {
     let Some(b64) = &exam.seb else { return Ok(()) };
-    let bytes = base64::engine::general_purpose::STANDARD.decode(b64).map_err(|e| format!("bad .seb payload: {e}"))?;
+    let raw = base64::engine::general_purpose::STANDARD.decode(b64).map_err(|e| format!("bad .seb payload: {e}"))?;
+    let bytes = seb_on_disk(&raw)?;
     let path = exam_path();
     let tmp = format!("{path}.tmp");
     fs::write(&tmp, &bytes).and_then(|_| fs::rename(&tmp, &path)).map_err(|e| format!("writing {path}: {e}"))?;
@@ -139,5 +148,19 @@ fn main() {
         }
 
         thread::sleep(Duration::from_secs(5));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::seb_on_disk;
+
+    #[test]
+    fn standard_seb_is_written_as_xml() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?><plist></plist>"#;
+        let wrapped = proto::seb_file::container::encode(xml, None);
+        assert!(wrapped.starts_with(&[0x1f, 0x8b]));
+        assert_eq!(seb_on_disk(&wrapped).unwrap(), xml.as_bytes());
+        assert_eq!(seb_on_disk(xml.as_bytes()).unwrap(), xml.as_bytes());
     }
 }
