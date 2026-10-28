@@ -16,6 +16,8 @@ usage() {
   echo "  --host   SSH target, e.g. orangepi@10.0.0.40"
   echo
   echo "BOARD_PASS defaults to orangepi (image default). Export to override."
+  echo "Reads EXAM_AGENT_TOKEN and EXAM_PUBLIC_URL from the repo .env so the"
+  echo "board posts to the same server the console is using."
 }
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -77,10 +79,35 @@ copy_agent() {
   remote_sudo "install -m 440 /tmp/seb-start.sudoers /etc/sudoers.d/seb-start"
 }
 
+load_env() {
+  local env_file="$ROOT/.env"
+  [[ -f "$env_file" ]] || die "missing $env_file. Copy .env.example to .env (same file deploy-server.sh uses)"
+  set -a
+  # shellcheck disable=SC1090
+  source "$env_file"
+  set +a
+  [[ -n "${EXAM_AGENT_TOKEN:-}" ]] || die "EXAM_AGENT_TOKEN is empty in .env"
+}
+
+write_board_env() {
+  local server tmp
+  server="${EXAM_SERVER:-${EXAM_PUBLIC_URL:-https://riscv-exam-computer.download}}"
+  server="${server%/}"
+  tmp="$(mktemp)"
+  chmod 600 "$tmp"
+  printf 'EXAM_AGENT_TOKEN=%s\nEXAM_SERVER=%s\n' "$EXAM_AGENT_TOKEN" "$server" > "$tmp"
+  echo "copy agent env -> $HOST:~/.config/seb-agent.env"
+  remote "mkdir -p ~/.config"
+  remote_copy "$tmp" "~/.config/seb-agent.env"
+  remote "chmod 600 ~/.config/seb-agent.env"
+  rm -f "$tmp"
+}
+
 install_agent_service() {
   [[ -f "$UNIT" ]] || die "missing $UNIT"
   echo "install systemd user unit"
   remote "mkdir -p ~/.config/systemd/user"
+  write_board_env
   remote_copy "$UNIT" "~/.config/systemd/user/seb-agent.service"
   remote_sudo "loginctl enable-linger \$USER"
   remote_sudo "systemctl start user@\$(id -u).service"
@@ -99,6 +126,7 @@ done
 
 [[ -n "$HOST" ]] || { usage >&2; die "--host is required"; }
 
+load_env
 cross_compile
 stop_agent
 copy_agent

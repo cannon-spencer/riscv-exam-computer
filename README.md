@@ -18,7 +18,7 @@ Starts Docker and the Cloudflare tunnel:
 ./scripts/deploy-server.sh
 ```
 
-Board (agent service POSTs to `https://riscv-exam-computer.download`):
+Board (agent POSTs to that same host; the token comes from `.env`):
 
 ```bash
 ./scripts/install-software.sh --host orangepi@10.0.0.xx
@@ -48,7 +48,7 @@ https://github.com/cannon-spencer/reptilian-riscv/releases/download/orangepi-rv/
 - `scripts/flash-os.sh` — write the SD image
 - `scripts/install-software.sh` — cross-compile `seb-agent`, scp it, enable the user systemd unit
 - `scripts/install-seb.sh` — download the CI `safe-exam-browser` ELF and scp it
-- `scripts/deploy-server.sh` — Docker-build `exam-env/server` and run it on this machine
+- `scripts/deploy-server.sh` — Docker-build `exam-env/server`, run it, and open the Cloudflare tunnel from `.env`
 - `docs/` — course LaTeX
 
 ## Clone

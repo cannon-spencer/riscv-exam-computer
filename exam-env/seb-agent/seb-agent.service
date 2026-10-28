@@ -7,6 +7,7 @@ Wants=network-online.target
 Type=simple
 ExecStart=%h/seb-agent
 Environment=HOSTNAME=%H
+EnvironmentFile=%h/.config/seb-agent.env
 Restart=always
 RestartSec=5
 
