@@ -1835,7 +1835,6 @@ dependencies = [
  "base64 0.22.1",
  "proto",
  "serde_json",
- "sha2",
  "ureq",
 ]
 
