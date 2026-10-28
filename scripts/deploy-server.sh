@@ -82,9 +82,9 @@ command -v curl >/dev/null || die "curl not on PATH"
 trap cleanup EXIT INT TERM
 
 echo "pulling $IMAGE"
-docker pull "$IMAGE" || die "could not pull $IMAGE. Push main and let the exam-server workflow finish. If pull says access denied, make that GitHub package public."
+docker pull "$IMAGE" || die "could not pull $IMAGE."
 
-mkdir -p "$CRATE/data"
+mkdir -p "$ROOT/exam-env/data"
 docker rm -f exam-server >/dev/null 2>&1 || true
 docker run -d --name exam-server --restart=no \
   -p "127.0.0.1:${PORT}:8000" \
@@ -93,7 +93,7 @@ docker run -d --name exam-server --restart=no \
   -e EXAM_PUBLIC_URL \
   -e EXAM_DATA_DIR=/data \
   -e EXAM_COOKIE_SECURE=always \
-  -v "$CRATE/data:/data" \
+  -v "$ROOT/exam-env/data:/data" \
   "$IMAGE"
 
 echo "waiting for http://127.0.0.1:${PORT}/healthz"
