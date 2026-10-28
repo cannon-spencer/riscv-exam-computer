@@ -3,6 +3,9 @@
 
 FROM rust:1-bookworm AS build
 
+# One rustc per CPU will exhaust an 8GB Docker VM while linking.
+ENV CARGO_BUILD_JOBS=2
+
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install cargo-leptos --version 0.3.11 --locked
 

@@ -7,6 +7,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CRATE="$ROOT/exam-env/seb-agent"
 UNIT="$CRATE/seb-agent.service"
 TARGET="riscv64gc-unknown-linux-gnu"
+# seb-agent is a workspace member, so cargo writes the binary in the
+# workspace target dir, not under the crate.
+BIN="$ROOT/exam-env/target/$TARGET/release/seb-agent"
 HOST=""
 BOARD_PASS="${BOARD_PASS:-orangepi}"
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=30)
@@ -52,8 +55,6 @@ cross_compile() {
   echo "building seb-agent ($TARGET)"
   cargo zigbuild --release --target "$TARGET" --manifest-path "$CRATE/Cargo.toml"
 }
-
-BIN="$CRATE/target/$TARGET/release/seb-agent"
 
 stop_agent() {
   userctl "systemctl --user stop seb-agent.service" 2>/dev/null || true
