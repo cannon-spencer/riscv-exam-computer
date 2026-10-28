@@ -40,6 +40,7 @@ pub fn LoginPage() -> impl IntoView {
                     "The password is set with " <code>"EXAM_ADMIN_PASSWORD"</code>
                     " on the server. If it is not set, the server prints a new one in its log each time it starts."
                 </p>
+                <div class="login-foot"><ProductMark/></div>
             </div>
         </main>
     }

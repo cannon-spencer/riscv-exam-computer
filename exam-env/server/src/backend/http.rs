@@ -408,6 +408,7 @@ fn is_public(path: &str) -> bool {
         || path.starts_with("/gate/")
         || path.starts_with("/pkg/")
         || path.starts_with("/fonts/")
+        || path.starts_with("/brand/")
 }
 
 /// Origin check on state-changing requests, then session check on

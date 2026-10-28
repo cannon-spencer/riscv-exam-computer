@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <style>
-    .s{stroke:#24308F} .f{fill:#17663F}
-    @media (prefers-color-scheme: dark){ .s{stroke:#A9B4FF} .f{fill:#5FD39A} }
+    .s{stroke:#171717} .f{fill:#297A3A}
+    @media (prefers-color-scheme: dark){ .s{stroke:#EDEDED} .f{fill:#62C073} }
   </style>
   <rect class="s" x="3" y="6" width="26" height="20" rx="3" fill="none" stroke-width="2.5"/>
   <path class="s" d="M9 2v4M16 2v4M23 2v4M9 26v4M16 26v4M23 26v4" stroke-width="2.5" stroke-linecap="round"/>
