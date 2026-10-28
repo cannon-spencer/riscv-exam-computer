@@ -5,8 +5,12 @@ docs/build/
 cache/
 
 # Rust
+exam-env/target/
 exam-env/seb-agent/target/
 exam-env/server/target/
+
+# Exam server local state (EXAM_DATA_DIR)
+exam-env/data/
 
 # Local deploy secrets
 .env

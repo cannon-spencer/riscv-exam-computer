@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["proto", "server", "seb-agent", "sim-agent"]
+
+[workspace.package]
+edition = "2024"
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
