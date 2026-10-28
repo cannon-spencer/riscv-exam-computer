@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Build exam-env/server, run it on 127.0.0.1:8000, and attach the Cloudflare tunnel.
+# Pull the published exam console, run it on 127.0.0.1:8000, and attach the Cloudflare tunnel.
 # Reads ../.env. Ctrl-C stops the tunnel and the container.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CRATE="$ROOT/exam-env"
 IMAGE="ghcr.io/cannon-spencer/exam-server:latest"
 PORT=8000
 ENV_FILE="$ROOT/.env"
@@ -82,8 +81,8 @@ command -v curl >/dev/null || die "curl not on PATH"
 
 trap cleanup EXIT INT TERM
 
-echo "building $IMAGE"
-DOCKER_BUILDKIT=1 docker build -f "$CRATE/server/Dockerfile" -t "$IMAGE" "$CRATE"
+echo "pulling $IMAGE"
+docker pull "$IMAGE" || die "could not pull $IMAGE. Push main and let the exam-server workflow finish. If pull says access denied, make that GitHub package public."
 
 mkdir -p "$CRATE/data"
 docker rm -f exam-server >/dev/null 2>&1 || true

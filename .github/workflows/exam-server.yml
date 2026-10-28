@@ -1,0 +1,81 @@
+name: Build exam server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - exam-env/**
+      - .github/workflows/exam-server.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/cannon-spencer/exam-server
+
+jobs:
+  build:
+    name: ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - arch: amd64
+            runner: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: exam-env
+          file: exam-env/server/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
+          build-args: CARGO_BUILD_JOBS=4
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish multi-arch tags
+        run: |
+          docker buildx imagetools create \
+            -t "$IMAGE:latest" \
+            -t "$IMAGE:${{ github.sha }}" \
+            "$IMAGE:${{ github.sha }}-arm64" \
+            "$IMAGE:${{ github.sha }}-amd64"
+
+      - name: Make the package public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/user/packages/container/exam-server/visibility" \
+            -f visibility=public \
+            || echo "could not mark the package public; set ghcr.io/cannon-spencer/exam-server public in GitHub package settings"
