@@ -1,0 +1,194 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{verbatim}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{M5: Release Candidate}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{CEN3908C CpE Design 2}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large October 28, 2026\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Overview}
+%=============================================================================
+
+This project is a university-owned exam computer for Canvas exams. Each station is an Orange Pi RV (RISC-V) running the manufacturer's Debian image with Safe Exam Browser (SEB), built from our \texttt{seb-linux} fork on WebKitGTK.
+
+\begin{itemize}
+  \item \textbf{Repository:} \url{https://github.com/cannon-spencer/riscv-exam-computer}
+  \item \textbf{Demo video:} \url{https://youtu.be/0rHPqLoynuA}
+\end{itemize}
+
+\paragraph{Architecture.}
+\begin{itemize}
+  \item \textbf{Board:} \texttt{seb-agent} checks in with the exam server every 5\,s, starts and stops SEB, and reports board stats.
+  \item \textbf{Exam server:} written in Rust. It runs in Docker behind a Cloudflare tunnel and serves the instructor console. From the console, an instructor creates exams, selects boards, and starts or stops them. The console also shows each board's status, stats, and the activity log.
+  \item \textbf{Starting an exam:} the server sends each board that exam's \texttt{.seb} file. The exam opens at the server's gate page, which shows the Canvas quiz access code only when SEB's Config Key hash matches, so the quiz cannot be opened in a regular browser.
+  \item \textbf{GPU stack (optional):} runs SEB in a \texttt{cage} kiosk on the PowerVR GPU.
+\end{itemize}
+
+%=============================================================================
+\section{Vertical features}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.22\textwidth}X@{}}
+    \toprule
+    \textbf{Element} & \textbf{Release Candidate} \\
+    \midrule
+    External interface &
+    \textbf{Instructor:} Leptos web console at \url{https://riscv-exam-computer.download} with session auth, exam creation, per-board or fleet start/stop, board telemetry, and activity log. \textbf{Student:} SEB on HDMI (GNOME session or \texttt{cage} kiosk on PowerVR GPU), opening the server gate before Canvas. \\
+    Persistent state &
+    Server snapshots exams (with per-exam key salts), board inventory, and activity log to \texttt{exam-env/data}. Board persists unique hardware-derived hostname, \texttt{seb-agent} user unit and \texttt{.config/seb-agent.env}, \texttt{safe-exam-browser}, \texttt{libseb-web-extension.so}, and \texttt{~/exam.seb}. \\
+    Internal systems &
+    Agent protocol 3 over HTTPS with Bearer token authentication, \texttt{.seb} delivery, Config Key verification at \texttt{/gate/<id>}, job IDs with timeouts and completion reporting, CI-published multi-arch server container image, and automated board provisioning scripts. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Vertical features in the release candidate.}
+  \label{tab:vertical}
+\end{table}
+
+%=============================================================================
+\section{Specification and rubric mapping}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.28\textwidth} >{\raggedright\arraybackslash}X@{}}
+    \toprule
+    \textbf{Rubric Criterion} & \textbf{Release Candidate} \\
+    \midrule
+    Usability: Interface \newline (\textit{20 pts}) &
+    Accessible, consistent Carbon-styled web console replaces raw \texttt{curl} commands. Password-protected instructor login, Bearer token auth for board agents, and accessible persistent state across server restarts (\texttt{exam-env/data}). \\
+    Usability: Navigation \newline (\textit{20 pts}) &
+    Discoverable top-level navigation across Fleet, Board Detail, Exams, and Activity Log. Instructors create an exam, select target boards, and start or stop them; boards boot, receive \texttt{.seb} payloads, and navigate through the gate page to Canvas. \\
+    Usability: Perception \newline (\textit{20 pts}) &
+    Live sensory and visual feedback: online/offline badges, last-seen age, running exam status, CPU temperature, load, memory, uptime, IP, SEB exit codes, and a persistent timestamped activity log. Refined from beta user testing. \\
+    Usability: Responsiveness \newline (\textit{20 pts}) &
+    Agent sleeps 5\,s between heartbeats to yield CPU resources. Jobs carry IDs, timeouts, and completion/failure evidence returned on the next heartbeat. Server pulls a pre-built image from GHCR for fast startup; optional PowerVR GPU kiosk accelerates rendering. \\
+    Build Quality: Robustness \newline (\textit{20 pts}) &
+    No showstopper bugs or crashes. Atomic \texttt{~/exam.seb} writes, systemd user unit with linger and auto-restart, token-authenticated heartbeats, Config Key gate verification, and workspace unit/integration tests (\texttt{cargo test --workspace --features ssr}). \\
+    Build Quality: Consistency \newline (\textit{20 pts}) &
+    Hardware-derived hostnames (\texttt{orangepi-<id>}) give every flashed board a deterministic identity. Per-exam salts keep Config Keys stable across restarts; identical scripts and release artifacts produce repeatable provisioning. \\
+    Build Quality: Aesthetic Rigor \newline (\textit{20 pts}) &
+    Cohesive Carbon UI across the instructor console and gate verification screen, locked-down SEB kiosk on HDMI, and custom VESA mount CAD integrating the physical station. \\
+    Completeness \newline (\textit{10 pts}) &
+    All vertical features integrated end-to-end (board image, agent, SEB + WebKitGTK extension, GPU kiosk, Rust server, Cloudflare tunnel, persistent state, tests, and documentation of architecture, instructions, and known bugs). \\
+    \bottomrule
+  \end{tabularx}
+  \caption{M5 rubric and specification mapping.}
+  \label{tab:rubric}
+\end{table}
+
+%=============================================================================
+\section{Instructions}
+%=============================================================================
+
+{\small
+\textbf{Clone and start server (laptop; needs Docker and \texttt{cloudflared}):}
+\begin{verbatim}
+git clone --recurse-submodules \
+  https://github.com/cannon-spencer/riscv-exam-computer.git
+cp .env.example .env   # set EXAM_ADMIN_PASSWORD, EXAM_AGENT_TOKEN,
+                       # EXAM_PUBLIC_URL, CLOUDFLARE_TUNNEL_CREDENTIALS
+./scripts/deploy-server.sh
+\end{verbatim}
+Open \texttt{EXAM\_PUBLIC\_URL} in a browser and sign in with the admin password.
+
+\textbf{Board (default login \texttt{orangepi}/\texttt{orangepi}, UART 115200 baud for first boot):}
+\begin{verbatim}
+./scripts/flash-os.sh --device /dev/rdiskN               # write SD card
+./scripts/install-software.sh --host orangepi@<board-ip> # agent, hostname
+./scripts/install-seb.sh --host orangepi@<board-ip>      # SEB + extension
+./scripts/install-gpu.sh --host orangepi@<board-ip>      # optional GPU kiosk
+\end{verbatim}
+
+\textbf{Tests:} \texttt{cd exam-env \&\& cargo test --workspace --features ssr}
+}
+
+%=============================================================================
+\section{Work completed this milestone}
+%=============================================================================
+
+\begin{itemize}
+  \item \texttt{.seb} delivery to boards (agent protocol 3), Config Key generation, and the SEB gate
+  \item Instructor console: login, board selection, board detail, exams, activity log, Carbon restyle
+  \item Server state saved to disk; jobs with IDs, timeouts, and results; agent tokens
+  \item GPU stack merged and released (\texttt{install-gpu.sh})
+  \item Board image built from the Orange Pi Debian GNOME build; SEB launches in the GNOME session
+  \item \texttt{build-seb.sh} builds SEB and its WebKitGTK extension; \texttt{install-seb.sh} installs both along with the Qt/WebKit runtime
+  \item Agent reports temperature, load, memory, uptime, IP, and SEB exit code
+  \item Unique board hostnames from hardware ID
+  \item Server image published by CI
+  \item VESA mount CAD
+\end{itemize}
+
+%=============================================================================
+\section{Known bugs}
+%=============================================================================
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{0.12\textwidth}X p{0.32\textwidth}@{}}
+    \toprule
+    \textbf{ID} & \textbf{Description} & \textbf{Workaround} \\
+    \midrule
+    BUG-03 &
+    A failed UF login can leave the student on \texttt{ufl.edu} with no way back to Canvas. &
+    Restart SEB from the console. \\
+    BUG-04 &
+    Without the GPU stack, SEB opens as a window in the GNOME desktop instead of a kiosk. &
+    Run \texttt{install-gpu.sh}. \\
+    BUG-05 &
+    If the SEB release has no \texttt{libseb-web-extension.so}, \texttt{install-seb.sh} installs SEB without it, and the gate cannot verify the board. &
+    Run \texttt{./scripts/build-seb.sh --upload}. \\
+    BUG-06 &
+    The board reaches about 75\,$^\circ$C without a heatsink, and the display sometimes flashes or tears. &
+    Replug HDMI or let the board cool down. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Known bugs in the release candidate.}
+  \label{tab:bugs}
+\end{table}
+
+\end{document}
