@@ -7,10 +7,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AGENT="$ROOT/exam-env/seb-agent"
 CACHE="$ROOT/cache/safe-exam-browser"
 SEB_URL="${SEB_URL:-https://github.com/cannon-spencer/seb-linux/releases/download/riscv64/safe-exam-browser}"
-# Temporary: the riscv64 release has no libseb-web-extension.so, so this 404s.
-# WebKitGTK extension: URL filter + SEB key headers. SEB won't start without it.
-# EXT_CACHE="$ROOT/cache/libseb-web-extension.so"
-# EXT_URL="${EXT_URL:-https://github.com/cannon-spencer/seb-linux/releases/download/riscv64/libseb-web-extension.so}"
+# WebKitGTK extension: URL filter + SEB key headers. SEB builds that have it
+# refuse to start an exam without it. scripts/build-seb.sh puts both files in
+# cache/; otherwise they come from the riscv64 release.
+EXT_CACHE="$ROOT/cache/libseb-web-extension.so"
+EXT_URL="${EXT_URL:-https://github.com/cannon-spencer/seb-linux/releases/download/riscv64/libseb-web-extension.so}"
 HOST=""
 BOARD_PASS="${BOARD_PASS:-orangepi}"
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=30)
@@ -50,13 +51,18 @@ else
   echo "using $CACHE"
 fi
 
-# if [[ ! -f "$EXT_CACHE" ]]; then
-#   echo "downloading $EXT_URL"
-#   curl -fL --retry 3 -o "$EXT_CACHE.tmp" "$EXT_URL" || die "no extension in the release yet ($EXT_URL)"
-#   mv "$EXT_CACHE.tmp" "$EXT_CACHE"
-# else
-#   echo "using $EXT_CACHE"
-# fi
+if [[ ! -f "$EXT_CACHE" ]]; then
+  echo "downloading $EXT_URL"
+  if curl -fL --retry 3 -o "$EXT_CACHE.tmp" "$EXT_URL"; then
+    mv "$EXT_CACHE.tmp" "$EXT_CACHE"
+  else
+    # Older release binaries don't use it; newer ones won't start without it.
+    rm -f "$EXT_CACHE.tmp"
+    echo "warning: no libseb-web-extension.so in the release; installing SEB without it"
+  fi
+else
+  echo "using $EXT_CACHE"
+fi
 
 echo "copy $CACHE -> $HOST:~/safe-exam-browser"
 sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$CACHE" "$HOST:~/safe-exam-browser"
@@ -69,10 +75,12 @@ remote "chmod +x ~/start-seb.sh ~/stop-seb.sh"
 
 # System location, so it is found wherever the binary ends up
 # (~/safe-exam-browser, or /usr/local/bin after scripts/install-gpu.sh).
-# echo "copy $EXT_CACHE -> $HOST:/usr/lib/seb-linux/webkit-extensions/"
-# sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$EXT_CACHE" "$HOST:/tmp/libseb-web-extension.so"
-# remote_sudo "install -D -m 644 /tmp/libseb-web-extension.so /usr/lib/seb-linux/webkit-extensions/libseb-web-extension.so"
-# remote "rm -f /tmp/libseb-web-extension.so"
+if [[ -f "$EXT_CACHE" ]]; then
+  echo "copy $EXT_CACHE -> $HOST:/usr/lib/seb-linux/webkit-extensions/"
+  sshpass -p "$BOARD_PASS" scp "${SSH_OPTS[@]}" "$EXT_CACHE" "$HOST:/tmp/libseb-web-extension.so"
+  remote_sudo "install -D -m 644 /tmp/libseb-web-extension.so /usr/lib/seb-linux/webkit-extensions/libseb-web-extension.so"
+  remote "rm -f /tmp/libseb-web-extension.so"
+fi
 
 echo "apt SEB runtime"
 # One sudo shell. A second SSH connection is what skipped this install last time.

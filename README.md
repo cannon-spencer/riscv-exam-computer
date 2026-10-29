@@ -47,7 +47,8 @@ https://github.com/cannon-spencer/reptilian-riscv/releases/download/orangepi-rv/
 - `exam-env/` — board agent, server API, admin UI
 - `scripts/flash-os.sh` — write the SD image
 - `scripts/install-software.sh` — cross-compile `seb-agent`, scp it, enable the user systemd unit
-- `scripts/install-seb.sh` — download the CI `safe-exam-browser` ELF and scp it
+- `scripts/build-seb.sh` — build `platform/seb-linux` on a board over SSH, copy the binary and WebKitGTK extension into `cache/` (`--upload` puts them on the release)
+- `scripts/install-seb.sh` — install `safe-exam-browser` and its WebKitGTK extension (from `cache/`, else the release)
 - `scripts/deploy-server.sh` — Docker-build `exam-env/server`, run it, and open the Cloudflare tunnel from `.env`
 - `docs/` — course LaTeX
 
