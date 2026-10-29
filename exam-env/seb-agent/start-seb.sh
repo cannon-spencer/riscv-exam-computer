@@ -19,6 +19,21 @@ if [ -x /usr/local/bin/seb-remote.sh ]; then
 fi
 
 # GNOME desktop image: open SEB in the logged-in orangepi session.
+# Prefer XWayland. With the WebKitGTK engine the exam page is its own
+# fullscreen keep-above window, and native Wayland ignores keep-above, so
+# SEB's Qt window ends up covering the page. Mutter honors it for X clients.
+XAUTH=$(ls "$RUNTIME"/.mutter-Xwaylandauth.* 2>/dev/null | head -n 1)
+if [ -S "$RUNTIME/wayland-0" ] && [ -S /tmp/.X11-unix/X0 ] && [ -n "$XAUTH" ]; then
+  exec runuser -u "$USER_NAME" -- env \
+    XDG_RUNTIME_DIR="$RUNTIME" \
+    DISPLAY=:0 \
+    XAUTHORITY="$XAUTH" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$RUNTIME/bus" \
+    GDK_BACKEND=x11 \
+    QT_QPA_PLATFORM=xcb \
+    "$SEB" --windowed "$EXAM"
+fi
+
 if [ -S "$RUNTIME/wayland-0" ]; then
   exec runuser -u "$USER_NAME" -- env \
     XDG_RUNTIME_DIR="$RUNTIME" \
