@@ -11,14 +11,12 @@ TARGET="riscv64gc-unknown-linux-gnu"
 # workspace target dir, not under the crate.
 BIN="$ROOT/exam-env/target/$TARGET/release/seb-agent"
 HOST=""
-RENAME=0
 BOARD_PASS="${BOARD_PASS:-orangepi}"
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=30)
 
 usage() {
   echo "Usage: $(basename "$0") --host <user@ip>"
   echo "  --host   SSH target, e.g. orangepi@10.0.0.40"
-  echo "  --rename rename the board to orangepi-<hardware id> even if it already has another name"
   echo
   echo "BOARD_PASS defaults to orangepi (image default). Export to override."
   echo "Reads EXAM_AGENT_TOKEN and EXAM_PUBLIC_URL from the repo .env so the"
@@ -82,59 +80,14 @@ copy_agent() {
   remote_sudo "install -m 440 /tmp/seb-start.sudoers /etc/sudoers.d/seb-start"
 }
 
-# The agent reports the board by hostname, and every flashed card starts as
-# "orangepi". Name each board orangepi-<last 6 hex of a hardware id>, so the
-# same board always gets the same name: the devicetree serial number if the
-# board has one, else the burned-in MAC of its first physical NIC (random,
-# locally administered MACs are skipped), else /etc/machine-id. A board that
-# already has another name keeps it unless --rename is given.
 set_board_name() {
-  local script
-  script="$(cat <<'EOF'
-set -e
-rename="$1"
-current="$(hostname)"
-id=""
-source=""
-if [ -r /sys/firmware/devicetree/base/serial-number ]; then
-  id="$(tr -d '\000' < /sys/firmware/devicetree/base/serial-number | tr -cd '[:alnum:]' | tr 'A-Z' 'a-z')"
-  source="serial number"
-fi
-case "$id" in *[!0]*) ;; *) id="" ;; esac
-if [ -z "$id" ]; then
-  for dev in /sys/class/net/*; do
-    [ -e "$dev/device" ] || continue
-    mac="$(cat "$dev/address")"
-    first="${mac%%:*}"
-    [ $((0x$first & 2)) -eq 0 ] || continue
-    case "$mac" in *[!0:]*) id="$(printf '%s' "$mac" | tr -d ':')"; source="MAC of ${dev##*/}"; break ;; esac
-  done
-fi
-if [ -z "$id" ]; then
-  [ -s /etc/machine-id ] || { echo "error: no hardware id or machine-id to name this board" >&2; exit 1; }
-  id="$(cat /etc/machine-id)"
-  source="/etc/machine-id"
-  echo "warning: no hardware id found; using /etc/machine-id, which may not be unique on cloned cards"
-fi
-want="orangepi-$(printf '%s' "$id" | tail -c 6)"
-if [ "$current" = "$want" ]; then
-  echo "hostname: $current"
-  exit 0
-fi
-if [ "$current" != orangepi ] && [ "$rename" != 1 ]; then
-  echo "hostname: $current (kept; this board's name would be $want, run with --rename to use it)"
-  exit 0
-fi
-hostnamectl set-hostname "$want"
-if grep -q '^127\.0\.1\.1' /etc/hosts; then
-  sed -i "s/^127\.0\.1\.1.*/127.0.1.1\t$want/" /etc/hosts
-else
-  printf '127.0.1.1\t%s\n' "$want" >> /etc/hosts
-fi
-echo "hostname: $current -> $want (from $source)"
-EOF
-)"
-  remote_sudo "bash -c $(printf %q "$script") set-name $RENAME"
+  echo "name the board"
+  # sudo -S reads the first line of stdin as the password. sh -s runs the
+  # rest, so the naming script never has to be stored on the board.
+  {
+    printf '%s\n' "$BOARD_PASS"
+    cat "$ROOT/scripts/set-board-name.sh"
+  } | sshpass -p "$BOARD_PASS" ssh "${SSH_OPTS[@]}" "$HOST" "sudo -S -p '' sh -s"
 }
 
 load_env() {
@@ -178,7 +131,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -h | --help) usage; exit 0 ;;
     --host) HOST="${2:?}"; shift 2 ;;
-    --rename) RENAME=1; shift ;;
     *) usage >&2; die "unknown argument: $1" ;;
   esac
 done
