@@ -25,7 +25,7 @@ Board (agent POSTs to that same host; the token comes from `.env`):
 ./scripts/install-seb.sh --host orangepi@10.0.0.xx
 ```
 
-`install-software.sh` renames a fresh board (hostname still `orangepi`) to `orangepi-<hardware id>`, so every board shows up separately in the console. `--name exam-01` picks the name instead.
+`install-software.sh` names a fresh board (hostname still `orangepi`) `orangepi-<hardware id>`, the same name every time for the same board, so boards show up separately in the console. A board with another name keeps it; `--rename` switches it to its hardware name.
 
 ## How the OS is built
 
