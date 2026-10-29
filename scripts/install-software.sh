@@ -11,12 +11,14 @@ TARGET="riscv64gc-unknown-linux-gnu"
 # workspace target dir, not under the crate.
 BIN="$ROOT/exam-env/target/$TARGET/release/seb-agent"
 HOST=""
+NAME=""
 BOARD_PASS="${BOARD_PASS:-orangepi}"
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=30)
 
 usage() {
   echo "Usage: $(basename "$0") --host <user@ip>"
   echo "  --host   SSH target, e.g. orangepi@10.0.0.40"
+  echo "  --name   board hostname (default: keep it, or orangepi-<hardware id> on a fresh board)"
   echo
   echo "BOARD_PASS defaults to orangepi (image default). Export to override."
   echo "Reads EXAM_AGENT_TOKEN and EXAM_PUBLIC_URL from the repo .env so the"
@@ -80,6 +82,54 @@ copy_agent() {
   remote_sudo "install -m 440 /tmp/seb-start.sudoers /etc/sudoers.d/seb-start"
 }
 
+# The agent reports the board by hostname, and every flashed card starts as
+# "orangepi". On a fresh board, name it orangepi-<last 6 hex of a hardware
+# id>: the devicetree serial number if the board has one, else the MAC of
+# its first physical NIC, else /etc/machine-id. The name is written to
+# /etc/hostname once, so it stays put even if the id source changes later.
+# A board that was already renamed keeps its name unless --name is given.
+set_board_name() {
+  local script
+  script="$(cat <<'EOF'
+set -e
+want="$1"
+current="$(hostname)"
+if [ -z "$want" ]; then
+  if [ "$current" != orangepi ]; then
+    echo "hostname: $current (kept)"
+    exit 0
+  fi
+  id=""
+  if [ -r /sys/firmware/devicetree/base/serial-number ]; then
+    id="$(tr -d '\000' < /sys/firmware/devicetree/base/serial-number | tr -cd '[:alnum:]' | tr 'A-Z' 'a-z')"
+  fi
+  case "$id" in *[!0]*) ;; *) id="" ;; esac
+  if [ -z "$id" ]; then
+    for dev in /sys/class/net/*; do
+      [ -e "$dev/device" ] || continue
+      mac="$(tr -d ':' < "$dev/address")"
+      case "$mac" in *[!0]*) id="$mac"; break ;; esac
+    done
+  fi
+  [ -n "$id" ] || id="$(cat /etc/machine-id)"
+  want="orangepi-$(printf '%s' "$id" | tail -c 6)"
+fi
+if [ "$want" = "$current" ]; then
+  echo "hostname: $current"
+  exit 0
+fi
+hostnamectl set-hostname "$want"
+if grep -q '^127\.0\.1\.1' /etc/hosts; then
+  sed -i "s/^127\.0\.1\.1.*/127.0.1.1\t$want/" /etc/hosts
+else
+  printf '127.0.1.1\t%s\n' "$want" >> /etc/hosts
+fi
+echo "hostname: $current -> $want"
+EOF
+)"
+  remote_sudo "bash -c $(printf %q "$script") set-name $(printf %q "$NAME")"
+}
+
 load_env() {
   local env_file="$ROOT/.env"
   [[ -f "$env_file" ]] || die "missing $env_file. Copy .env.example to .env (same file deploy-server.sh uses)"
@@ -121,16 +171,20 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -h | --help) usage; exit 0 ;;
     --host) HOST="${2:?}"; shift 2 ;;
+    --name) NAME="${2:?}"; shift 2 ;;
     *) usage >&2; die "unknown argument: $1" ;;
   esac
 done
 
 [[ -n "$HOST" ]] || { usage >&2; die "--host is required"; }
+[[ -z "$NAME" || "$NAME" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] \
+  || die "--name must be lowercase letters, digits and dashes (max 63)"
 
 load_env
 cross_compile
 stop_agent
 copy_agent
+set_board_name
 install_agent_service
 
 echo
