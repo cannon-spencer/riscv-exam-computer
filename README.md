@@ -25,6 +25,8 @@ Board (agent POSTs to that same host; the token comes from `.env`):
 ./scripts/install-seb.sh --host orangepi@10.0.0.xx
 ```
 
+`install-software.sh` names a fresh board (hostname still `orangepi`) `orangepi-<hardware id>`, the same name every time for the same board, so boards show up separately in the console. A board with another name keeps it; `--rename` switches it to its hardware name.
+
 ## How the OS is built
 
 `reptilian-riscv` holds the Orange Pi kernel, U-Boot, and image builder. That repo rarely changes.
