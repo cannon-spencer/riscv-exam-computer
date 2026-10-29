@@ -45,16 +45,31 @@ pub fn IconSvg(icon: Icon) -> impl IntoView {
     }
 }
 
+/// College wordmark. CSS shows the blue-text version on light themes and the
+/// reversed (white-text) version on dark themes; the hidden one is skipped by
+/// screen readers because it is `display: none`.
 #[component]
 pub fn Logo() -> impl IntoView {
-    // A board outline with a status dot: the product in one glyph.
+    const ALT: &str = "Herbert Wertheim College of Engineering";
     view! {
-        <svg class="logo" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
-            <rect x="3" y="6" width="26" height="20" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M9 2v4M16 2v4M23 2v4M9 26v4M16 26v4M23 26v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <rect x="9" y="11" width="9" height="10" fill="currentColor" opacity=".18"/>
-            <rect x="20" y="13" width="6" height="6" class="logo-dot"/>
-        </svg>
+        <span class="logo">
+            <img class="logo-light" src="/brand/wertheim-logo.png" alt=ALT width="640" height="427"/>
+            <img class="logo-dark" src="/brand/wertheim-logo-dark.png" alt=ALT width="640" height="427"/>
+        </span>
+    }
+}
+
+/// Small RISC-V Exam Computer project mark, secondary to [`Logo`]. Like the
+/// wordmark, it swaps to a file with white "RISC" lettering on dark themes
+/// (same `logo-light` / `logo-dark` switch).
+#[component]
+pub fn ProductMark() -> impl IntoView {
+    const ALT: &str = "RISC-V Exam Computer";
+    view! {
+        <span class="product-mark">
+            <img class="logo-light" src="/brand/risc-v-exam-computer.png" alt=ALT width="480" height="154"/>
+            <img class="logo-dark" src="/brand/risc-v-exam-computer-dark.png" alt=ALT width="480" height="154"/>
+        </span>
     }
 }
 
@@ -65,31 +80,31 @@ pub fn Logo() -> impl IntoView {
 pub fn StatusIcon(status: Status) -> impl IntoView {
     let shape = match status {
         Status::Running => view! {
-            <rect class="pulse" x="1.5" y="1.5" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1"/>
-            <rect x="3.5" y="3.5" width="9" height="9" fill="currentColor"/>
+            <circle class="pulse" cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1"/>
+            <circle cx="8" cy="8" r="4.5" fill="currentColor"/>
         }
         .into_any(),
         Status::Starting => view! {
-            <rect x="2.5" y="2.5" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" opacity=".25"/>
-            <path class="spin" d="M2.5 2.5h11v11" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="2" opacity=".25"/>
+            <path class="spin" d="M8 2.5a5.5 5.5 0 0 1 5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         }
         .into_any(),
         Status::Stopping => view! {
-            <rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"/>
-            <rect x="5.5" y="5.5" width="5" height="5" fill="currentColor"/>
+            <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="5.5" y="5.5" width="5" height="5" rx=".5" fill="currentColor"/>
         }
         .into_any(),
         Status::Idle => view! {
-            <rect x="3" y="3" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
         }
         .into_any(),
         Status::Error => view! {
             <path d="M8 1.8l6.6 11.9H1.4z" fill="currentColor"/>
-            <path d="M8 6v3.6M8 11.3v.2" stroke="var(--surface)" stroke-width="1.8"/>
+            <path d="M8 6v3.6M8 11.3v.2" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round"/>
         }
         .into_any(),
         Status::Offline => view! {
-            <rect x="2.5" y="2.5" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2.4"/>
+            <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.2 2.2"/>
         }
         .into_any(),
     };
@@ -241,7 +256,7 @@ pub fn EmptyState(#[prop(into)] title: String, #[prop(optional)] children: Optio
     view! {
         <section class="empty">
             <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden="true" class="empty-art">
-                <rect x="14" y="16" width="56" height="40" fill="none" stroke="currentColor" stroke-width="2"/>
+                <rect x="14" y="16" width="56" height="40" rx="5" fill="none" stroke="currentColor" stroke-width="2"/>
                 <path d="M26 8v8M42 8v8M58 8v8M26 56v8M42 56v8M58 56v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 <circle cx="56" cy="36" r="5" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/>
                 <path d="M78 40h10M92 40h4M100 40h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".6"/>

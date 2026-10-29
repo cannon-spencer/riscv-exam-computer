@@ -3,11 +3,18 @@
 The console is used in a classroom, often on a laptop at the front of the
 room, sometimes on a phone while walking between rows. It has one job: show
 which exam boards are ready and let the instructor start or stop them with
-confidence. The design is called **Night**. It is flat and dark only:
-square-cornered charcoal panels with 1px rules on a near-black page, a
-dense layout, white for primary actions, and color spent only on status.
-Think instrument panel, not a marketing site: no rounded corners, no
-blur, no glow, no hover lift.
+confidence.
+
+The visual system follows **IBM's Carbon Design System**. The upstream
+reference is vendored at
+[`design/ibm-carbon-reference.md`](design/ibm-carbon-reference.md) (from
+[awesome-design-md](https://github.com/VoltAgent/awesome-design-md)). This
+file is the adaptation for the console and wins wherever the two disagree.
+In short: white and Gray 10 layers, charcoal type, square corners, no
+shadows, IBM Plex Sans with light-weight (300) display numbers and titles,
+IBM Blue as the single accent, and Carbon's own patterns for the pieces:
+side nav, tags, content switcher, inline notifications, batch-action bar,
+structured list, progress bar.
 
 Principles, in priority order:
 
@@ -15,123 +22,110 @@ Principles, in priority order:
    and a word. Remove any one of them and the status is still readable.
 2. **Destructive and fleet-wide actions are explicit.** The UI always says
    how many boards an action targets and which boards it skipped and why.
-3. **Quiet by default, loud when it matters.** Structure comes from 1px
-   rules and spacing. Color is spent on status and on the security
-   warning only.
-4. **Works offline.** No CDN fonts, scripts, or images. Everything is served
-   by the exam server.
+3. **Engineered, not decorated.** Structure comes from layers and 1px
+   rules. Blue marks what is interactive.
+4. **Works offline.** No CDN fonts, scripts, or images. IBM Plex Sans and
+   Mono are vendored (OFL).
+
+## Themes
+
+**White** is the default. **Gray 100** applies when the system prefers dark
+or the instructor picks Dark in the sidebar toggle.
 
 ## Tokens
 
-All tokens are CSS custom properties on `:root` in `server/style/main.css`.
-Components use tokens, never raw values. There is one theme (dark); the
-old light/dark toggle is no longer shown.
+All tokens are CSS custom properties on `:root` in `server/style/main.css`,
+named after Carbon's own tokens.
 
-### Color
+| Token              | White     | Gray 100  | Use                                   |
+| ------------------ | --------- | --------- | ------------------------------------- |
+| `--background`     | `#FFFFFF` | `#161616` | Page; fields and code inside layers   |
+| `--layer`          | `#F4F4F4` | `#262626` | Sidebar, tiles, cards, panels         |
+| `--layer-hover`    | `#E8E8E8` | `#333333` | Hovered layer items                   |
+| `--layer-selected` | `#E0E0E0` | `#393939` | Current nav item, selected card/tile  |
+| `--border-subtle`  | `#E0E0E0` | `#393939` | Dividers                              |
+| `--border-strong`  | `#8D8D8D` | `#6F6F6F` | Field bottom rule, switcher outline   |
+| `--text-primary`   | `#161616` | `#F4F4F4` | Primary text                          |
+| `--text-secondary` | `#525252` | `#C6C6C6` | Secondary text, labels                |
+| `--text-helper`    | `#6F6F6F` | `#A8A8A8` | Helper text, meta                     |
+| `--interactive`    | `#0F62FE` | `#0F62FE` | Primary button, nav indicator, bar    |
+| `--link`           | `#0F62FE` | `#78A9FF` | Links, ghost buttons                  |
+| `--focus`          | `#0F62FE` | `#FFFFFF` | 2px inset focus outline               |
 
-| Token              | Value                 | Use                                   |
-| ------------------ | --------------------- | ------------------------------------- |
-| `--paper`          | `#121214`             | Page background                       |
-| `--paper-glow`     | `#17171C`             | Soft radial light at the top of page  |
-| `--surface`        | `#18181B`             | Cards, panels, tiles                  |
-| `--surface-hover`  | `#202024`             | Hovered cards, secondary btns         |
-| `--surface-sunk`   | `#151518`             | Empty states, quiet panels            |
-| `--surface-solid`  | `#1C1C20`             | Opaque fallback (select menus)        |
-| `--glass`          | `#1C1C20`             | Floating bars (solid, no blur)        |
-| `--ink`            | `#F5F5F7`             | Primary text                          |
-| `--ink-muted`      | `#A1A1A6`             | Secondary text                        |
-| `--ink-faint`      | `#6E6E73`             | Labels, hints, placeholders           |
-| `--rule`           | `#2A2A2E`             | 1px borders and dividers              |
-| `--rule-strong`    | `#3A3A40`             | Inputs, offline cards (dashed)        |
-| `--accent`         | `#F5F5F7`             | Primary button fill                   |
-| `--accent-ink`     | `#121214`             | Text on accent                        |
-| `--accent-wash`    | `#232327`             | Current nav item, selected card       |
-| `--focus`          | `#F5F5F7`             | 2px focus ring (3px offset)           |
+### Status: Carbon tags
 
-### Status colors (semantic)
+Badges are Carbon tags (24px pills, 12px label). Each status sets a text
+color `--st-*` and a tag pair `--tag-*` / `--tag-*-ink`.
 
-Each status has a foreground (`--st-*`) and a wash (`--st-*-wash`, the
-foreground at 14-16% alpha). **Status is always shown as icon + word +
-color.** Offline cards are also transparent with an outline, so a
-grayscale screenshot still reads correctly.
+| Status     | Word      | Icon (shape)                   | Tag (White)         | Tag (Gray 100)      |
+| ---------- | --------- | ------------------------------ | ------------------- | ------------------- |
+| `running`  | Running   | Solid disc with a slow pulse   | green 20 / green 70 | green 80 / green 20 |
+| `starting` | Starting… | Quarter-arc spinner            | yellow 10 / 70      | yellow 80 / 20      |
+| `stopping` | Stopping… | Square inside a ring           | yellow 10 / 70      | yellow 80 / 20      |
+| `idle`     | Ready     | Hollow ring                    | blue 20 / blue 70   | blue 80 / blue 20   |
+| `error`    | Error     | Triangle with exclamation mark | red 20 / red 70     | red 80 / red 20     |
+| `offline`  | Offline   | Dashed ring                    | gray 20 / gray 80   | gray 80 / gray 20   |
 
-| Status     | Word         | Icon (shape)                    | Color     |
-| ---------- | ------------ | ------------------------------- | --------- |
-| `running`  | Running      | Solid square with a slow pulse  | `#7FD08A` |
-| `starting` | Starting…    | Square with a spinning edge     | `#E0A458` |
-| `stopping` | Stopping…    | Small square inside a square    | `#E0A458` |
-| `idle`     | Ready        | Hollow square                   | `#ECECEF` |
-| `error`    | Error        | Triangle with exclamation mark  | `#E5484D` |
-| `offline`  | Offline      | Dashed square                   | `#6E6E76` |
-
-Starting and stopping share a hue on purpose, since both mean "in
-transition, wait". Their shapes and words differ.
-
-The security warning (no agent token) uses `--warn` (`#E5C07B`) for its
-icon and heading on a `--warn-wash` background.
+Error cards also carry a 3px red left rule; offline cards drop to the page
+color with a 1px outline, so status survives a grayscale screenshot.
 
 ### Type
 
-- UI text uses the system font (`-apple-system`, SF Pro, Segoe UI
-  Variable, ...) with vendored **IBM Plex Sans** as the fallback, so it
-  stays offline.
-- **IBM Plex Mono** 400, 500 (vendored) for hostnames, IDs, JSON, and
-  timestamps. Numbers always use `font-variant-numeric: tabular-nums`.
+IBM Plex Sans 300 / 400 / 600; IBM Plex Mono 400 / 500 for hostnames,
+timestamps, JSON and the add-site chips.
 
-| Token        | Size / line height | Use                                  |
-| ------------ | ------------------ | ------------------------------------ |
-| `--t-xs`     | 12 / 16            | Meta, captions, stat labels          |
-| `--t-sm`     | 13 / 18            | Secondary text                       |
-| `--t-base`   | 15 / 22            | Body, controls, stat values          |
-| `--t-md`     | 17 / 24            | Card titles                          |
-| `--t-lg`     | 22 / 28            | Section titles                       |
-| `--t-xl`     | 34 / 40            | Page titles (700)                    |
-| `--t-num`    | 34 / 40            | Summary counts                       |
+| Token      | Size / line height | Weight | Tracking | Use                          |
+| ---------- | ------------------ | ------ | -------- | ---------------------------- |
+| `--t-label`| 12 / 16            | 400    | 0.32px   | Labels, helper text, tags    |
+| `--t-body` | 14 / 20            | 400    | 0.16px   | Body, controls (base)        |
+| `--t-h2`   | 16 / 22            | 600    | 0        | Card titles                  |
+| `--t-h3`   | 20 / 28            | 400    | 0        | Panel titles, board stats    |
+| `--t-h5`   | 32 / 40            | 300    | 0        | Sign-in, empty states        |
+| `--t-disp` | 42 / 50            | 300    | 0        | Page titles, summary counts  |
 
-Headings use `letter-spacing: -0.02em`. Labels are sentence case in
-`--ink-faint`, not uppercase.
+The light 300 weight at display size is the Carbon/IBM signature; never
+bold large type.
 
-### Space, radius, elevation, motion
+### Shape and depth
 
-- Spacing scale (4px base): `--s1` 4, `--s2` 8, `--s3` 12, `--s4` 16,
-  `--s5` 24, `--s6` 40, `--s7` 64.
-- Radius: all `--r-*` tokens are 0. Nothing is rounded, including
-  buttons, badges, inputs, and status shapes.
-- Elevation: surfaces are flat fills with 1px `--rule` borders. Hover
-  changes the fill only; nothing lifts or scales. The selection bar and
-  login card float with `--shadow-float` on an opaque `--glass` fill.
-- Motion: `.2-.3s` with `--ease`. All transitions and status
-  animations stop under `prefers-reduced-motion`.
-- Hit targets are at least 40×40px; 44px on touch (`pointer: coarse`).
+- **Square corners everywhere** except tags (pills, as in Carbon).
+- **No shadows** on anything in the page flow. Tiles and cards sit 2px
+  apart on the white page so the gaps read as rules. The only shadow is
+  under the floating batch-action bar.
+- Motion: 70ms Carbon "productive" easing on background color only.
+
+## Components (Carbon equivalents)
+
+| Console piece   | Carbon pattern           | Notes                                                        |
+| --------------- | ------------------------ | ------------------------------------------------------------ |
+| Sidebar         | UI shell side nav        | Gray 10 rail; current item gets `--layer-selected` and a 3px blue left bar. |
+| Summary tiles   | Clickable tiles          | Light 42px count; pressed tile gets a 3px status-colored bottom bar. |
+| Board card      | Selectable tile          | Selected = 1px charcoal outline on `--layer-selected`.       |
+| Selection bar   | Data table batch actions | Full IBM Blue 48px bar with white text; the only blue surface. |
+| Buttons         | Button kinds             | Square: primary (blue), secondary (charcoal), danger tertiary (red outline, solid when armed), ghost (blue text). Label left-aligned. |
+| Fields          | Text input / select      | `--background` fill, 1px bottom rule, 2px inset focus outline. |
+| Filters, theme  | Content switcher         | Outlined segments; selected segment is inverted charcoal.    |
+| Token banner    | Inline notification      | Warning: yellow 3px left bar. Result panel: info, blue bar.  |
+| Activity        | Structured list          | 1px row rules, hover fill; actor shown as tags.              |
+| Memory          | Progress bar             | 8px square track, blue fill (yellow/red when high/full).     |
+| JSON preview    | Code snippet             | Plex Mono 12/16 on `--background`.                           |
+| Exam downloads  | Ghost buttons            | "Download .seb" and "Download JSON"; "With password…" opens a full-width form row; Delete sits at the far right. |
+
+## Brand marks
+
+- `Logo`: college wordmark at the top of the sidebar and sign-in card;
+  reversed white-text file in Gray 100.
+- `ProductMark`: small RISC-V Exam Computer mark (max 152px) in the sidebar
+  footer and the foot of the sign-in card; in Gray 100 it uses a file
+  with white "RISC" lettering instead of the navy one.
 
 ## Layout
 
-- Desktop (≥ 960px): 240px borderless sidebar (wordmark, nav, sign out)
-  + content column with max width 1320px and `--s6` gutters.
-- Tablet / phone (< 960px): sidebar becomes a sticky top bar with
-  the wordmark and a horizontal nav row; gutters drop to 16px. No
-  horizontal page scroll at 360px width.
-- Board grid: `repeat(auto-fill, minmax(280px, 1fr))`; one column on
-  phones.
-
-## Components
-
-| Component        | Notes                                                                          |
-| ---------------- | ------------------------------------------------------------------------------ |
-| `Shell`          | Sidebar/topbar, nav with `aria-current="page"`, sign-out form.                  |
-| `Banner`         | Page-wide notice. Variant `warn` for the missing agent token.                   |
-| `StatusBadge`    | Icon + word, tinted wash. `role="status"` is not used (it would be too chatty). |
-| `SummaryStrip`   | One tile per status with count; tiles act as filters (`aria-pressed`).         |
-| `BoardCard`      | Checkbox, display name, mono hostname, badge, 3 key stats, last seen, link.    |
-| `SelectionBar`   | Sticky bottom bar when ≥ 1 board selected: count, exam picker, Start, Stop.    |
-| `ResultPanel`    | After an action: boards queued, boards skipped with the reason for each.       |
-| `Button`         | Square buttons: `primary` (white), `secondary` (gray fill), `danger` (red wash), `ghost`. |
-| `Field`          | Label above, hint below, error text in `--st-error` with an icon.              |
-| `Stat`           | Caps label + mono value; optional `Meter` (memory) or `Sparkline` (temp).      |
-| `Timeline`       | Activity rows: time (mono), actor chip (Instructor / Board / System), text.    |
-| `JsonPreview`    | Mono `<pre>` on `--surface-sunk`, scrolls horizontally inside itself.          |
-| `EmptyState`     | Line illustration (inline SVG, `currentColor`), one sentence, one action.      |
-| `ConfirmButton`  | Two-step destructive button: first click arms it ("Click again to forget").    |
+- Desktop: 256px side nav + content column (max 1584px, 32px gutters).
+- < 960px: side nav becomes a top bar with tabs (2px blue underline on the
+  current tab); RISC-V mark and theme switcher are hidden; the batch-action
+  bar docks full width to the bottom edge.
+- Board grid `repeat(auto-fill, minmax(288px, 1fr))` with 2px gaps.
 
 ## Rules for future UI work
 
@@ -139,12 +133,11 @@ Headings use `letter-spacing: -0.02em`. Labels are sentence case in
 2. Never encode meaning in color alone. Pair it with an icon shape and a word.
 3. Every action that changes boards reports what happened per board,
    including skipped boards and why.
-4. Text from boards or instructors (hostnames, names, URLs) is untrusted.
-   Render it as text. Never use `inner_html` or build HTML strings.
+4. Text from boards or instructors is untrusted. Render it as text.
 5. Keep it offline: no external fonts, scripts, images, or analytics.
-6. Check a 360px phone width, keyboard-only use (visible focus,
-   logical tab order), and `prefers-reduced-motion`.
+6. Check 360px width, keyboard-only use, reduced motion, and both themes.
 7. Copy is plain and specific: "Start exam on 4 boards", not "Submit".
-   Use sentence case. No exclamation marks.
-8. Mono font for anything a person might compare character by character:
-   hostnames, IPs, hashes, versions, timestamps, JSON.
+8. Mono for anything compared character by character.
+9. Carbon rules that apply here: one accent (IBM Blue), square corners,
+   no drop shadows in the page flow, light weight for large type, positive
+   tracking on body and labels.

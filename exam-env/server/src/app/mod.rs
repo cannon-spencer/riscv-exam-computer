@@ -36,8 +36,9 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
             <head>
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <meta name="color-scheme" content="dark"/>
+                <meta name="color-scheme" content="light dark"/>
                 <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+                <link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" r#as="font" r#type="font/woff2" crossorigin="anonymous"/>
                 <link rel="preload" href="/fonts/ibm-plex-mono-latin-400-normal.woff2" r#as="font" r#type="font/woff2" crossorigin="anonymous"/>
                 <link rel="stylesheet" href="/pkg/console.css"/>
                 <HydrationScripts options/>
@@ -74,7 +75,7 @@ fn NotFound() -> impl IntoView {
     }
     view! {
         <Shell>
-            <Title text="Not found Â· Exam Console"/>
+            <Title text="Not found · Exam Console"/>
             <ui::EmptyState title="There is nothing at this address">
                 <a class="btn secondary" href="/">"Go to the fleet"</a>
             </ui::EmptyState>
@@ -119,6 +120,8 @@ pub fn Shell(children: Children) -> impl IntoView {
                     <NavLink href="/activity" label="Activity" icon=ui::Icon::List/>
                 </nav>
                 <div class="side-foot">
+                    <ui::ProductMark/>
+                    <ui::ThemeToggle/>
                     <form method="post" action="/auth/logout">
                         <button class="btn ghost small" type="submit">
                             <ui::IconSvg icon=ui::Icon::Exit/>
