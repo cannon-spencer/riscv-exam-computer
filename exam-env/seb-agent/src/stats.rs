@@ -7,15 +7,32 @@ use std::net::UdpSocket;
 
 use proto::MemStats;
 
-/// Hottest thermal zone, in °C.
+/// Hottest sensor, in °C. Thermal zones where the kernel has them, plus hwmon
+/// inputs: the JH7110 on the Orange Pi RV exposes its sensor (sfctemp) only
+/// through hwmon.
 pub fn cpu_temp_c() -> Option<f32> {
-    let zones = fs::read_dir("/sys/class/thermal").ok()?;
+    let zones = sensor_files("/sys/class/thermal", "thermal_zone", |n| n == "temp");
+    let hwmon = sensor_files("/sys/class/hwmon", "hwmon", |n| n.starts_with("temp") && n.ends_with("_input"));
     zones
-        .flatten()
-        .filter(|z| z.file_name().to_string_lossy().starts_with("thermal_zone"))
-        .filter_map(|z| fs::read_to_string(z.path().join("temp")).ok())
+        .chain(hwmon)
+        .filter_map(|p| fs::read_to_string(p).ok())
         .filter_map(|t| parse_millidegrees(&t))
         .reduce(f32::max)
+}
+
+/// Files matching `file` inside each `class/<prefix>*` device directory.
+fn sensor_files(class: &str, prefix: &str, file: fn(&str) -> bool) -> impl Iterator<Item = std::path::PathBuf> {
+    let prefix = prefix.to_string();
+    fs::read_dir(class)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(move |d| d.file_name().to_string_lossy().starts_with(&prefix))
+        .filter_map(|d| fs::read_dir(d.path()).ok())
+        .flatten()
+        .flatten()
+        .filter(move |f| file(&f.file_name().to_string_lossy()))
+        .map(|f| f.path())
 }
 
 pub fn load() -> Option<[f32; 3]> {
