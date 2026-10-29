@@ -8,6 +8,8 @@
 //! without a `.seb` (older server) falls back to whatever `~/exam.seb`
 //! already holds.
 
+mod stats;
+
 use std::fs;
 use std::process::{Child, Command, Stdio};
 use std::thread;
@@ -30,11 +32,16 @@ fn exam_path() -> String {
     format!("{}/exam.seb", home())
 }
 
-fn running(child: &mut Option<Child>) -> bool {
+/// Whether the SEB session is still alive. When it has ended, records the
+/// start script's exit code in `last_exit` for the heartbeat.
+fn running(child: &mut Option<Child>, last_exit: &mut Option<i32>) -> bool {
     let Some(c) = child.as_mut() else { return false };
     match c.try_wait() {
         Ok(None) => true,
-        _ => {
+        r => {
+            if let Ok(Some(st)) = r {
+                *last_exit = st.code();
+            }
             *child = None;
             false
         }
@@ -65,8 +72,8 @@ fn install_exam(exam: &ExamPayload) -> Result<(), String> {
     Ok(())
 }
 
-fn start_seb(child: &mut Option<Child>) -> Result<(), String> {
-    if running(child) {
+fn start_seb(child: &mut Option<Child>, last_exit: &mut Option<i32>) -> Result<(), String> {
+    if running(child, last_exit) {
         return Ok(());
     }
     let s = script("start-seb.sh");
@@ -76,7 +83,7 @@ fn start_seb(child: &mut Option<Child>) -> Result<(), String> {
     Ok(())
 }
 
-fn stop_seb(child: &mut Option<Child>) -> Result<(), String> {
+fn stop_seb(child: &mut Option<Child>, last_exit: &mut Option<i32>) -> Result<(), String> {
     let s = script("stop-seb.sh");
     let r = match Command::new("sudo").args(["-n", &s]).status() {
         Ok(st) if st.success() => Ok(()),
@@ -84,7 +91,9 @@ fn stop_seb(child: &mut Option<Child>) -> Result<(), String> {
         Err(e) => Err(format!("stop seb: {e}")),
     };
     if let Some(mut c) = child.take() {
-        let _ = c.wait();
+        if let Ok(st) = c.wait() {
+            *last_exit = st.code();
+        }
     }
     r
 }
@@ -98,9 +107,10 @@ fn main() {
     let mut seb = None;
     let mut exam_id: Option<String> = None;
     let mut job_result: Option<JobResult> = None;
+    let mut last_exit: Option<i32> = None;
 
     loop {
-        let is_running = running(&mut seb);
+        let is_running = running(&mut seb, &mut last_exit);
         if !is_running {
             exam_id = None;
         }
@@ -109,6 +119,12 @@ fn main() {
             state: if is_running { state::RUNNING } else { state::IDLE }.into(),
             protocol: Some(PROTOCOL_VERSION),
             agent_version: Some(env!("CARGO_PKG_VERSION").into()),
+            ip: stats::ip(),
+            cpu_temp_c: stats::cpu_temp_c(),
+            load: stats::load(),
+            mem: stats::mem(),
+            uptime_s: stats::uptime_s(),
+            last_exit_code: last_exit,
             exam_id: exam_id.clone(),
             job_result: job_result.take(),
             ..Default::default()
@@ -132,9 +148,9 @@ fn main() {
                         .exam
                         .as_ref()
                         .map_or(Ok(()), install_exam)
-                        .and_then(|_| start_seb(&mut seb))
+                        .and_then(|_| start_seb(&mut seb, &mut last_exit))
                         .map(|_| exam_id = r.exam.as_ref().map(|e| e.id.clone())),
-                    Some(JobKind::Stop) => stop_seb(&mut seb),
+                    Some(JobKind::Stop) => stop_seb(&mut seb, &mut last_exit),
                     None => Ok(()),
                 };
                 if let (Some(id), Some(_)) = (r.job_id, r.job) {
