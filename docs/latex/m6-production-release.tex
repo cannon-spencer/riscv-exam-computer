@@ -1,0 +1,91 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{url}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{verbatim}
+\captionsetup{font=it}
+\captionsetup{justification=centering}
+
+\geometry{margin=1in}
+\setlength{\headheight}{42pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\includegraphics[height=0.5in]{../artifacts/logo.png}}
+\renewcommand{\headrulewidth}{0pt}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{1in}
+  {\fontsize{25pt}{30pt}\selectfont\textbf{M6: Production Release}\par}
+  \vspace{0.5in}
+  {\LARGE\textbf{CEN3908C CpE Design 2}\par}
+  \vspace{0.35em}
+  {\Large Hardened RISC-V Exam Computer\par}
+  \vspace{0.3em}
+  {\Large November 18, 2026\par}
+  \vspace{0.6in}
+  {\Large Cannon Spencer \quad George Rushevich \quad Justin Reyes \quad Gabriel Velazquez\par}
+  \vspace{1in}
+  \includegraphics[height=1.65in]{../artifacts/uf-logo.png}\hspace{1.25in}%
+  \includegraphics[height=1.65in]{../artifacts/big-logo.png}\par
+\end{titlepage}
+\newpage
+\setcounter{page}{1}
+
+\section{Overview}
+
+The Hardened RISC-V Exam Computer is a university-owned exam station for Canvas exams. Each station is an Orange Pi RV (StarFive JH7110) running the manufacturer's Debian image and Safe Exam Browser (SEB), built from our \texttt{seb-linux} fork on WebKitGTK. A Rust exam server behind a Cloudflare tunnel hosts the instructor console. Each board runs \texttt{seb-agent}, which checks in with the server every 5\,s, starts and stops SEB, and reports board stats.
+
+\begin{itemize}
+  \item \textbf{Repository:} \url{https://github.com/cannon-spencer/riscv-exam-computer}
+  \item \textbf{Demo video:} \url{https://youtu.be/0rHPqLoynuA}
+\end{itemize}
+
+The README covers setup and usage, the architecture, and known bugs. Dated engineering notes are in \texttt{docs/log/}.
+
+\section{User Experience}
+
+\textbf{Interface.} Instructors use a web console styled after IBM's Carbon design system, with pages for Fleet, Board Detail, Exams and Activity Log. Focused controls get a visible outline, and selected items use Carbon's selected style. Persistent state is shown in the console: each board's status, last-seen time and running exam, the list of exams, and the activity log. Students see only SEB on the HDMI display.
+
+\textbf{Navigation.} An instructor signs in, creates an exam (start URL, allowed domains, quiz access code), selects boards, and starts or stops the exam. On the board, SEB opens the server's gate page and then the Canvas quiz.
+
+\textbf{Perception.} Each board's status is shown as an icon, a word and a color, so no status depends on color alone. The console also shows CPU temperature, load, memory, uptime, IP address and the last SEB exit code. Every start and stop is recorded in a timestamped activity log. Two non-team students used a board without help; both logged in and used Canvas, and both said it was slow.
+
+\textbf{Responsiveness.} The agent sleeps 5\,s between heartbeats instead of busy-waiting. Start and stop requests return right away with a job ID. The board picks the job up on its next heartbeat and reports the result on a later one. A board counts as offline 15\,s after its last heartbeat, an undelivered job expires after 60\,s, and a start that takes longer than 90\,s or a stop that takes longer than 45\,s is shown as an error. SEB can run in a \texttt{cage} kiosk that renders on the board's PowerVR GPU.
+
+\section{Build Quality}
+
+\textbf{Robustness.} The server writes its state to a temporary file, syncs it and renames it, so a crash cannot leave a half-written file. The agent runs as a systemd user unit that restarts automatically. Boards authenticate with a token, and the console uses a password login with rate limits and origin checks. 52 automated tests (\texttt{cargo test --workspace --features ssr}) cover Config Key generation against files saved by official SEB, \texttt{.seb} encoding, URL rules, the job lifecycle and timeouts, login rate limits, bad input, agent tokens, and the gate accepting the right hash and rejecting a wrong one. Two endurance sessions of about 12 hours each ran without a crash.
+
+\textbf{Consistency.} Each board is named from its hardware ID (\texttt{orangepi-<id>}), so it keeps the same name on every install. Each exam has a fixed random salt, so its Config Key stays the same across server restarts. Every board is installed from the same CI-built OS image and release binaries.
+
+\textbf{Aesthetic rigor.} The console, login page and gate page share the Carbon styling and project branding. SEB runs full-screen on the display. A 3D-printed VESA bracket (\texttt{docs/cad}) mounts the board on the back of a monitor.
+
+\section{Features}
+
+\textbf{External interface.} The instructor console at \url{https://riscv-exam-computer.download} starts and stops exams on selected boards. Students use SEB on the board's display. Board state changes appear in the console on the next heartbeat.
+
+\textbf{Persistent state.} The server stores exams (with their key salts), the board inventory, jobs and the activity log in \texttt{exam-env/data}, and reloads them on restart. Each board stores its hostname, agent configuration and token, the SEB binary and its WebKitGTK extension, and the current exam's \texttt{\textasciitilde/exam.seb}.
+
+\textbf{Internal systems.} The agent and server communicate over HTTPS with JSON heartbeats (agent protocol 3). The server generates each exam's \texttt{.seb} file and Config Key and sends the file with the start job. The gate checks SEB's Config Key hash before it shows the quiz access code. GitHub Actions builds the OS image and the server container, and the scripts in \texttt{scripts/} flash and set up boards.
+
+\section{Work this milestone}
+
+\begin{itemize}
+  \item Tested an NVMe root filesystem with a new \texttt{bench-board.sh} script. Random I/O was about 16 times faster than the SD card, but boot time and SEB launch did not improve, so the SD card remains the supported setup.
+  \item Wrote the R4 final report.
+  \item Setup more board stations.
+  \item Final performance and general testing.
+\end{itemize}
+
+\end{document}
